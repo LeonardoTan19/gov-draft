@@ -16,7 +16,7 @@ export const useSettingsStore = defineStore('settings', () => {
   /** 编辑器设置 */
   const editorSettings = ref<EditorSettings>({
     fontSize: 14,
-    theme: 'light',
+    colorMode: 'light',
     lineNumbers: true,
     wordWrap: true,
     tabSize: 2
@@ -158,7 +158,7 @@ export const useSettingsStore = defineStore('settings', () => {
   function resetSettings(): void {
     editorSettings.value = {
       fontSize: 14,
-      theme: 'light',
+      colorMode: 'light',
       lineNumbers: true,
       wordWrap: true,
       tabSize: 2

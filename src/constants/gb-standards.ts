@@ -5,7 +5,7 @@
  * 参考标准：GB/T 9704-2012《党政机关公文格式》
  */
 
-import type { ColorConfig, FontConfig, PageConfig, SpacingConfig } from '../types/theme';
+import type { ColorConfig, FontConfig, PageConfig, SpacingConfig } from '../types/rule';
 
 /**
  * GB/T 9704-2012 标准页面配置
@@ -48,22 +48,43 @@ export const GB_FONT_CONFIG: FontConfig = {
   body: {
     family: '仿宋_GB2312, FangSong, STFangsong, serif',  // 正文使用仿宋
     size: '16pt',           // 三号字体（16pt）
-    weight: 400
+    weight: 400,
+    bold: false,
+    align: 'justify'
   },
   heading: {
-    families: {
-      h1: '方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif', // 主标题使用小标宋
-      h2: '黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif', // 一级标题使用黑体
-      h3: '楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif', // 二级标题使用楷体
-      h4: '仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif' // 三级标题使用仿宋
+    h1: {
+      family: '方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif',
+      size: '22pt',
+      weight: 700,
+      bold: true,
+      align: 'center',
+      numberingStyle: 'none'
     },
-    sizes: {
-      h1: '22pt',          // 二号字体（22pt）- 用于主标题
-      h2: '16pt',          // 三号字体（16pt）- 用于一级标题
-      h3: '16pt',          // 三号字体（16pt）- 用于二级标题
-      h4: '16pt'           // 三号字体（16pt）- 用于三级标题
+    h2: {
+      family: '黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif',
+      size: '16pt',
+      weight: 700,
+      bold: true,
+      align: 'left',
+      numberingStyle: 'chinese-comma'
     },
-    weight: 700
+    h3: {
+      family: '楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif',
+      size: '16pt',
+      weight: 700,
+      bold: true,
+      align: 'left',
+      numberingStyle: 'chinese-paren'
+    },
+    h4: {
+      family: '仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif',
+      size: '16pt',
+      weight: 400,
+      bold: false,
+      align: 'left',
+      numberingStyle: 'arabic-dot'
+    }
   }
 };
 
@@ -88,7 +109,8 @@ export const GB_COLOR_CONFIG: ColorConfig = {
 export const GB_SPACING_CONFIG: SpacingConfig = {
   lineHeight: '28.95pt',   // 固定行距（一个汉字高度 + 7/8 汉字高度）
   paragraphSpacing: '0',   // 段落间距
-  indent: '2em'            // 首行缩进 2 字符（7.3.3）
+  indent: '2em',           // 首行缩进 2 字符（7.3.3）
+  headingParagraphBreak: false
 };
 
 /**

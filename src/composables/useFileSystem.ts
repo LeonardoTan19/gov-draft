@@ -5,7 +5,7 @@
  */
 
 import { useDocumentStore } from '../stores/doc'
-import { useThemeStore } from '../stores/theme'
+import { useRuleStore } from '../stores/rule'
 
 /**
  * useFileSystem 组合式函数
@@ -15,7 +15,7 @@ import { useThemeStore } from '../stores/theme'
  */
 export function useFileSystem() {
   const docStore = useDocumentStore()
-  const themeStore = useThemeStore()
+  const ruleStore = useRuleStore()
 
   /**
    * 导入文件
@@ -73,7 +73,7 @@ export function useFileSystem() {
       const finalFilename = filename.endsWith('.html') ? filename : `${filename}.html`
       
       // 创建完整的 HTML 文档
-      const fullHtml = createFullHtmlDocument(html, themeStore.getThemeCssText)
+      const fullHtml = createFullHtmlDocument(html, ruleStore.getRuleCssText)
       
       // 创建 Blob
       const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' })
@@ -212,7 +212,7 @@ export function useFileSystem() {
    * @param bodyHtml - body 部分的 HTML
    * @returns 完整的 HTML 文档字符串
    */
-  const createFullHtmlDocument = (bodyHtml: string, themeCssText: string): string => {
+  const createFullHtmlDocument = (bodyHtml: string, ruleCssText: string): string => {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -220,7 +220,7 @@ export function useFileSystem() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${docStore.metadata.title || '公文'}</title>
   <style>
-${themeCssText}
+${ruleCssText}
   </style>
 </head>
 <body>

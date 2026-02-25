@@ -1,22 +1,12 @@
-/**
- * 主题编译器
- * 将主题配置编译为结构化规则与 CSS 文本
- */
-
-import type { AtRule, CompiledTheme, StyleDeclaration, StyleNode, StyleRule, ThemeConfig } from '../../types/theme';
+import type { AtRule, CompiledRule, RuleConfig, StyleDeclaration, StyleNode, StyleRule } from '../../types/rule';
 import { scopeSelectors } from './css-scope';
 
 const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
 const CSS_PROPERTY_UNSAFE_CHARS = /[{};:\n\r]/g;
 
-/**
- * 编译主题配置为 CSS
- * @param themeConfig 主题配置对象
- * @returns 编译后的主题（包含 CSS 变量和规则）
- */
-export function compileTheme(themeConfig: ThemeConfig): CompiledTheme {
-  const tokens = generateThemeTokens(themeConfig);
-  const rules = generateThemeRules(themeConfig, tokens);
+export function compileRule(ruleConfig: RuleConfig): CompiledRule {
+  const tokens = generateRuleTokens(ruleConfig);
+  const rules = generateRuleStyleNodes(ruleConfig, tokens);
   const cssText = serializeStyleSheet(rules);
 
   return {
@@ -26,9 +16,6 @@ export function compileTheme(themeConfig: ThemeConfig): CompiledTheme {
   };
 }
 
-/**
- * 规范化 CSS 值，避免拼接时引入非法字符
- */
 function sanitizeCssValue(value: unknown): string {
   return String(value ?? '')
     .replace(CSS_VALUE_UNSAFE_CHARS, ' ')
@@ -41,9 +28,6 @@ function sanitizeCssProperty(value: string): string {
     .trim();
 }
 
-/**
- * 构建声明
- */
 function declaration(property: string, value: unknown): StyleDeclaration {
   return {
     property: sanitizeCssProperty(property),
@@ -51,9 +35,6 @@ function declaration(property: string, value: unknown): StyleDeclaration {
   };
 }
 
-/**
- * 构建样式规则
- */
 function styleRule(selectors: string[], declarations: StyleDeclaration[]): StyleRule {
   return {
     type: 'style',
@@ -62,9 +43,6 @@ function styleRule(selectors: string[], declarations: StyleDeclaration[]): Style
   };
 }
 
-/**
- * 构建 at-rule
- */
 function atRule(name: string, options: Omit<AtRule, 'type' | 'name'> = {}): AtRule {
   return {
     type: 'at-rule',
@@ -73,28 +51,35 @@ function atRule(name: string, options: Omit<AtRule, 'type' | 'name'> = {}): AtRu
   };
 }
 
-/**
- * 生成主题 token
- */
-function generateThemeTokens(config: ThemeConfig): Record<string, string> {
+function generateRuleTokens(config: RuleConfig): Record<string, string> {
   return {
     '--font-body-family': sanitizeCssValue(config.fonts.body.family),
     '--font-body-size': sanitizeCssValue(config.fonts.body.size),
-    '--font-body-weight': sanitizeCssValue(config.fonts.body.weight),
-    '--font-heading-h1-family': sanitizeCssValue(config.fonts.heading.families.h1),
-    '--font-heading-h2-family': sanitizeCssValue(config.fonts.heading.families.h2),
-    '--font-heading-h3-family': sanitizeCssValue(config.fonts.heading.families.h3),
-    '--font-heading-h4-family': sanitizeCssValue(config.fonts.heading.families.h4),
-    '--font-heading-h1-size': sanitizeCssValue(config.fonts.heading.sizes.h1),
-    '--font-heading-h2-size': sanitizeCssValue(config.fonts.heading.sizes.h2),
-    '--font-heading-h3-size': sanitizeCssValue(config.fonts.heading.sizes.h3),
-    '--font-heading-h4-size': sanitizeCssValue(config.fonts.heading.sizes.h4),
-    '--font-heading-weight': sanitizeCssValue(config.fonts.heading.weight),
+    '--font-body-weight': sanitizeCssValue(config.fonts.body.bold ? 700 : config.fonts.body.weight),
+    '--font-body-align': sanitizeCssValue(config.fonts.body.align),
 
-    // 间距变量
+    '--font-heading-h1-family': sanitizeCssValue(config.fonts.heading.h1.family),
+    '--font-heading-h2-family': sanitizeCssValue(config.fonts.heading.h2.family),
+    '--font-heading-h3-family': sanitizeCssValue(config.fonts.heading.h3.family),
+    '--font-heading-h4-family': sanitizeCssValue(config.fonts.heading.h4.family),
+    '--font-heading-h1-size': sanitizeCssValue(config.fonts.heading.h1.size),
+    '--font-heading-h2-size': sanitizeCssValue(config.fonts.heading.h2.size),
+    '--font-heading-h3-size': sanitizeCssValue(config.fonts.heading.h3.size),
+    '--font-heading-h4-size': sanitizeCssValue(config.fonts.heading.h4.size),
+    '--font-heading-h1-weight': sanitizeCssValue(config.fonts.heading.h1.bold ? 700 : config.fonts.heading.h1.weight),
+    '--font-heading-h2-weight': sanitizeCssValue(config.fonts.heading.h2.bold ? 700 : config.fonts.heading.h2.weight),
+    '--font-heading-h3-weight': sanitizeCssValue(config.fonts.heading.h3.bold ? 700 : config.fonts.heading.h3.weight),
+    '--font-heading-h4-weight': sanitizeCssValue(config.fonts.heading.h4.bold ? 700 : config.fonts.heading.h4.weight),
+    '--font-heading-h1-align': sanitizeCssValue(config.fonts.heading.h1.align),
+    '--font-heading-h2-align': sanitizeCssValue(config.fonts.heading.h2.align),
+    '--font-heading-h3-align': sanitizeCssValue(config.fonts.heading.h3.align),
+    '--font-heading-h4-align': sanitizeCssValue(config.fonts.heading.h4.align),
+
     '--spacing-line-height': sanitizeCssValue(config.spacing.lineHeight),
     '--spacing-paragraph': sanitizeCssValue(config.spacing.paragraphSpacing),
     '--spacing-indent': sanitizeCssValue(config.spacing.indent),
+    '--spacing-heading-paragraph-gap': sanitizeCssValue(config.spacing.headingParagraphBreak ? config.spacing.paragraphSpacing : '0'),
+
     '--color-text': sanitizeCssValue(config.colors.text),
     '--color-background': sanitizeCssValue(config.colors.background),
     '--color-accent': sanitizeCssValue(config.colors.accent),
@@ -107,17 +92,11 @@ function generateThemeTokens(config: ThemeConfig): Record<string, string> {
   };
 }
 
-/**
- * 将 token 映射转换为声明列表
- */
 function mapTokensToDeclarations(tokens: Record<string, string>): StyleDeclaration[] {
   return Object.entries(tokens).map(([property, value]) => declaration(property, value));
 }
 
-/**
- * 生成结构化规则
- */
-function generateThemeRules(config: ThemeConfig, tokens: Record<string, string>): StyleNode[] {
+function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, string>): StyleNode[] {
   const rules: StyleNode[] = [];
   const textTargets = ['.preview-content', '.export-document'];
   const textScopeRoots = ['.preview-content', '.export-document'];
@@ -139,83 +118,50 @@ function generateThemeRules(config: ThemeConfig, tokens: Record<string, string>)
     styleRule(scopeSelectors(['p'], textScopeRoots), [
       declaration('margin', 'var(--spacing-paragraph) 0'),
       declaration('text-indent', 'var(--spacing-indent)'),
-      declaration('text-align', 'justify')
+      declaration('text-align', 'var(--font-body-align)')
     ])
   );
 
   rules.push(
-    styleRule(scopeSelectors(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], textScopeRoots), [
-      declaration('font-weight', 'var(--font-heading-weight)'),
-      declaration('text-align', 'center'),
-      declaration('margin', '1em 0 0.5em 0')
+    styleRule(scopeSelectors(['h1 + p', 'h2 + p', 'h3 + p', 'h4 + p'], textScopeRoots), [
+      declaration('margin-top', 'var(--spacing-heading-paragraph-gap)')
     ])
   );
 
   rules.push(
     styleRule(scopeSelectors(['h1'], textScopeRoots), [
       declaration('font-family', 'var(--font-heading-h1-family)'),
-      declaration('font-size', 'var(--font-heading-h1-size)')
+      declaration('font-size', 'var(--font-heading-h1-size)'),
+      declaration('font-weight', 'var(--font-heading-h1-weight)'),
+      declaration('text-align', 'var(--font-heading-h1-align)'),
+      declaration('margin', '1em 0 0.5em 0')
     ])
   );
   rules.push(
     styleRule(scopeSelectors(['h2'], textScopeRoots), [
       declaration('font-family', 'var(--font-heading-h2-family)'),
-      declaration('font-size', 'var(--font-heading-h2-size)')
+      declaration('font-size', 'var(--font-heading-h2-size)'),
+      declaration('font-weight', 'var(--font-heading-h2-weight)'),
+      declaration('text-align', 'var(--font-heading-h2-align)'),
+      declaration('margin', '1em 0 0.5em 0')
     ])
   );
   rules.push(
     styleRule(scopeSelectors(['h3'], textScopeRoots), [
       declaration('font-family', 'var(--font-heading-h3-family)'),
-      declaration('font-size', 'var(--font-heading-h3-size)')
+      declaration('font-size', 'var(--font-heading-h3-size)'),
+      declaration('font-weight', 'var(--font-heading-h3-weight)'),
+      declaration('text-align', 'var(--font-heading-h3-align)'),
+      declaration('margin', '1em 0 0.5em 0')
     ])
   );
   rules.push(
     styleRule(scopeSelectors(['h4', 'h5', 'h6'], textScopeRoots), [
-      declaration('font-family', 'var(--font-heading-h4-family)')
-    ])
-  );
-  rules.push(
-    styleRule(scopeSelectors(['h4'], textScopeRoots), [
-      declaration('font-size', 'var(--font-heading-h4-size)')
-    ])
-  );
-
-  rules.push(
-    styleRule(scopeSelectors(['ul', 'ol'], textScopeRoots), [
-      declaration('padding-left', '2em')
-    ])
-  );
-  rules.push(styleRule(scopeSelectors(['li'], textScopeRoots), [declaration('margin', '0.25em 0')]));
-  rules.push(
-    styleRule(scopeSelectors(['blockquote'], textScopeRoots), [
-      declaration('border-left', '4px solid var(--color-accent)'),
-      declaration('margin', '1em 0'),
-      declaration('padding-left', '1em')
-    ])
-  );
-  rules.push(
-    styleRule(scopeSelectors(['code'], textScopeRoots), [
-      declaration('font-family', 'Courier New, monospace'),
-      declaration('font-size', '0.9em')
-    ])
-  );
-  rules.push(
-    styleRule(scopeSelectors(['pre'], textScopeRoots), [
-      declaration('overflow-x', 'auto'),
-      declaration('padding', '1em')
-    ])
-  );
-  rules.push(
-    styleRule(scopeSelectors(['table'], textScopeRoots), [
-      declaration('width', '100%'),
-      declaration('border-collapse', 'collapse'),
-      declaration('margin', '1em 0')
-    ])
-  );
-  rules.push(
-    styleRule(scopeSelectors(['th', 'td'], textScopeRoots), [
-      declaration('border', '1px solid var(--color-text)'),
-      declaration('padding', '0.5em')
+      declaration('font-family', 'var(--font-heading-h4-family)'),
+      declaration('font-size', 'var(--font-heading-h4-size)'),
+      declaration('font-weight', 'var(--font-heading-h4-weight)'),
+      declaration('text-align', 'var(--font-heading-h4-align)'),
+      declaration('margin', '1em 0 0.5em 0')
     ])
   );
 

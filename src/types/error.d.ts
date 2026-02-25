@@ -8,8 +8,8 @@
 export enum ErrorType {
   /** 解析错误 */
   PARSE_ERROR = 'PARSE_ERROR',
-  /** 主题错误 */
-  THEME_ERROR = 'THEME_ERROR',
+  /** 标准错误 */
+  RULE_ERROR = 'RULE_ERROR',
   /** 文件错误 */
   FILE_ERROR = 'FILE_ERROR',
   /** 验证错误 */

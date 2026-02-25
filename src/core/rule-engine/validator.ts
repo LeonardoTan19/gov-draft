@@ -1,44 +1,37 @@
-/**
- * 主题配置验证器
- * 验证主题 JSON 结构的有效性
- */
-
-import type { ValidationIssue, ValidationResult } from '../../types/theme';
+import type { ValidationIssue, ValidationResult } from '../../types/rule';
 
 const CSS_LENGTH_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
 const CSS_LINE_HEIGHT_PATTERN = /^-?\d+(\.\d+)?$|^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
 const CSS_COLOR_PATTERN = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\(.+\)|rgba\(.+\)|hsl\(.+\)|hsla\(.+\))$/;
 const FONT_WEIGHT_SET = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
+const ALIGN_SET = new Set(['left', 'center', 'right', 'justify']);
+const DISABLED_SYNTAX_SET = new Set(['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule']);
 
 type AnyRecord = Record<string, unknown>;
 
-/**
- * 验证主题配置
- * @param themeConfig 主题配置对象
- * @returns 验证结果
- */
-export function validateTheme(themeConfig: unknown): ValidationResult {
+export function validateRule(ruleConfig: unknown): ValidationResult {
   const issues: ValidationIssue[] = [];
 
-  if (!themeConfig) {
-    pushError(issues, 'theme', '主题配置不能为空');
+  if (!ruleConfig) {
+    pushError(issues, 'rule', '标准配置不能为空');
     return buildValidationResult(issues);
   }
 
-  if (typeof themeConfig !== 'object') {
-    pushError(issues, 'theme', '主题配置必须是对象');
+  if (typeof ruleConfig !== 'object') {
+    pushError(issues, 'rule', '标准配置必须是对象');
     return buildValidationResult(issues);
   }
 
-  const theme = themeConfig as AnyRecord;
+  const rule = ruleConfig as AnyRecord;
 
-  validateString(theme.name, 'name', issues);
-  validateString(theme.version, 'version', issues);
+  validateString(rule.name, 'name', issues);
+  validateString(rule.version, 'version', issues);
 
-  validateFonts(theme.fonts, issues);
-  validateSpacing(theme.spacing, issues);
-  validateColors(theme.colors, issues);
-  validatePage(theme.page, issues);
+  validateFonts(rule.fonts, issues);
+  validateSpacing(rule.spacing, issues);
+  validateColors(rule.colors, issues);
+  validatePage(rule.page, issues);
+  validateParser(rule.parser, issues);
 
   return buildValidationResult(issues);
 }
@@ -97,48 +90,59 @@ function validateFontWeight(value: unknown, path: string, issues: ValidationIssu
   }
 }
 
+function validateTextAlign(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value !== 'string' || !ALIGN_SET.has(value)) {
+    pushError(issues, path, '必须是 left/center/right/justify 之一');
+  }
+}
+
+function validateBoolean(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value !== 'boolean') {
+    pushError(issues, path, '必须是布尔值');
+  }
+}
+
+function validateTextFont(font: unknown, path: string, issues: ValidationIssue[]): void {
+  if (!isObject(font)) {
+    pushError(issues, path, '字段缺失或类型错误');
+    return;
+  }
+
+  validateString(font.family, `${path}.family`, issues);
+  validateCssLength(font.size, `${path}.size`, issues);
+  validateFontWeight(font.weight, `${path}.weight`, issues);
+  validateBoolean(font.bold, `${path}.bold`, issues);
+  validateTextAlign(font.align, `${path}.align`, issues);
+}
+
+function validateHeadingFont(font: unknown, path: string, issues: ValidationIssue[]): void {
+  validateTextFont(font, path, issues);
+  if (!isObject(font)) {
+    return;
+  }
+
+  if (font.numberingStyle !== undefined && typeof font.numberingStyle !== 'string') {
+    pushError(issues, `${path}.numberingStyle`, '必须是字符串');
+  }
+}
+
 function validateFonts(fonts: unknown, issues: ValidationIssue[]): void {
   if (!isObject(fonts)) {
     pushError(issues, 'fonts', '字段缺失或类型错误');
     return;
   }
 
-  const body = fonts.body;
-  if (!isObject(body)) {
-    pushError(issues, 'fonts.body', '字段缺失或类型错误');
-  } else {
-    validateString(body.family, 'fonts.body.family', issues);
-    validateCssLength(body.size, 'fonts.body.size', issues);
-    validateFontWeight(body.weight, 'fonts.body.weight', issues);
-  }
+  validateTextFont(fonts.body, 'fonts.body', issues);
 
-  const heading = fonts.heading;
-  if (!isObject(heading)) {
+  if (!isObject(fonts.heading)) {
     pushError(issues, 'fonts.heading', '字段缺失或类型错误');
     return;
   }
 
-  const families = heading.families;
-  if (!isObject(families)) {
-    pushError(issues, 'fonts.heading.families', '字段缺失或类型错误');
-  } else {
-    validateString(families.h1, 'fonts.heading.families.h1', issues);
-    validateString(families.h2, 'fonts.heading.families.h2', issues);
-    validateString(families.h3, 'fonts.heading.families.h3', issues);
-    validateString(families.h4, 'fonts.heading.families.h4', issues);
-  }
-
-  const sizes = heading.sizes;
-  if (!isObject(sizes)) {
-    pushError(issues, 'fonts.heading.sizes', '字段缺失或类型错误');
-  } else {
-    validateCssLength(sizes.h1, 'fonts.heading.sizes.h1', issues);
-    validateCssLength(sizes.h2, 'fonts.heading.sizes.h2', issues);
-    validateCssLength(sizes.h3, 'fonts.heading.sizes.h3', issues);
-    validateCssLength(sizes.h4, 'fonts.heading.sizes.h4', issues);
-  }
-
-  validateFontWeight(heading.weight, 'fonts.heading.weight', issues);
+  validateHeadingFont(fonts.heading.h1, 'fonts.heading.h1', issues);
+  validateHeadingFont(fonts.heading.h2, 'fonts.heading.h2', issues);
+  validateHeadingFont(fonts.heading.h3, 'fonts.heading.h3', issues);
+  validateHeadingFont(fonts.heading.h4, 'fonts.heading.h4', issues);
 }
 
 function validateSpacing(spacing: unknown, issues: ValidationIssue[]): void {
@@ -150,6 +154,7 @@ function validateSpacing(spacing: unknown, issues: ValidationIssue[]): void {
   validateCssLineHeight(spacing.lineHeight, 'spacing.lineHeight', issues);
   validateCssLength(spacing.paragraphSpacing, 'spacing.paragraphSpacing', issues);
   validateCssLength(spacing.indent, 'spacing.indent', issues);
+  validateBoolean(spacing.headingParagraphBreak, 'spacing.headingParagraphBreak', issues);
 }
 
 function validateColors(colors: unknown, issues: ValidationIssue[]): void {
@@ -179,14 +184,32 @@ function validatePage(page: unknown, issues: ValidationIssue[]): void {
     pushError(issues, 'page.orientation', `必须是以下值之一: ${validOrientations.join(', ')}`);
   }
 
-  const margins = page.margins;
-  if (!isObject(margins)) {
+  if (!isObject(page.margins)) {
     pushError(issues, 'page.margins', '字段缺失或类型错误');
     return;
   }
 
-  validateCssLength(margins.top, 'page.margins.top', issues);
-  validateCssLength(margins.right, 'page.margins.right', issues);
-  validateCssLength(margins.bottom, 'page.margins.bottom', issues);
-  validateCssLength(margins.left, 'page.margins.left', issues);
+  validateCssLength(page.margins.top, 'page.margins.top', issues);
+  validateCssLength(page.margins.right, 'page.margins.right', issues);
+  validateCssLength(page.margins.bottom, 'page.margins.bottom', issues);
+  validateCssLength(page.margins.left, 'page.margins.left', issues);
+}
+
+function validateParser(parser: unknown, issues: ValidationIssue[]): void {
+  if (!isObject(parser)) {
+    pushError(issues, 'parser', '字段缺失或类型错误');
+    return;
+  }
+
+  validateBoolean(parser.headingNumbering, 'parser.headingNumbering', issues);
+
+  if (!Array.isArray(parser.disabledSyntax)) {
+    pushError(issues, 'parser.disabledSyntax', '必须是数组');
+  } else {
+    parser.disabledSyntax.forEach((item, index) => {
+      if (typeof item !== 'string' || !DISABLED_SYNTAX_SET.has(item)) {
+        pushError(issues, `parser.disabledSyntax.${index}`, '包含非法语法项');
+      }
+    });
+  }
 }

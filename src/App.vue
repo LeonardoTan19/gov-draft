@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useDocumentStore } from './stores/doc'
-import { useThemeStore } from './stores/theme'
+import { useRuleStore } from './stores/rule'
 import { useStyleInjector } from './composables/useStyleInjector'
 import { useFileSystem } from './composables/useFileSystem'
+import { useMarkdown } from './composables/useMarkdown'
 
 const docStore = useDocumentStore()
-const themeStore = useThemeStore()
+const ruleStore = useRuleStore()
 const { exportMarkdown, exportHtml, importFile } = useFileSystem()
+const { setOptions } = useMarkdown()
 useStyleInjector()
 
 // 编辑器内容
@@ -23,14 +25,14 @@ const editorContent = ref(`# gov-draft 公文排版系统演示
 - 支持标题、列表、强调等基本语法
 - 实时预览渲染结果
 
-### 2. 主题系统
-- 内置国标主题
-- 支持主题切换
+### 2. 标准系统
+- 内置国标标准
+- 支持标准切换
 - 动态样式注入
 
 ### 3. 状态管理
 - 文档状态管理
-- 主题配置管理
+- 标准配置管理
 - 设置持久化
 
 ### 4. 文件操作
@@ -59,8 +61,8 @@ const editorContent = ref(`# gov-draft 公文排版系统演示
 // 文件输入引用
 const fileInput = ref<HTMLInputElement | null>(null)
 
-// 当前主题索引
-const currentThemeIndex = ref(0)
+// 当前标准索引
+const currentRuleIndex = ref(0)
 
 // 同步编辑器内容到 store
 const updateContent = () => {
@@ -92,27 +94,37 @@ const handleImportFile = async (event: Event) => {
   }
 }
 
-// 切换主题
-const switchTheme = () => {
-  const themes = themeStore.availableThemes
-  if (themes.length > 0) {
-    currentThemeIndex.value = (currentThemeIndex.value + 1) % themes.length
-    const nextTheme = themes[currentThemeIndex.value]
-    if (nextTheme) {
-      themeStore.loadTheme(nextTheme)
+// 切换标准
+const switchRule = () => {
+  const rules = ruleStore.availableRules
+  if (rules.length > 0) {
+    currentRuleIndex.value = (currentRuleIndex.value + 1) % rules.length
+    const nextRule = rules[currentRuleIndex.value]
+    if (nextRule) {
+      ruleStore.loadRule(nextRule)
     }
   }
 }
 
-// 当前主题名称
-const currentThemeName = computed(() => {
-  return themeStore.currentTheme?.name || '未加载'
+// 当前标准名称
+const currentRuleName = computed(() => {
+  return ruleStore.currentRule?.name || '未加载'
 })
+
+watch(
+  () => ruleStore.currentRule?.parser,
+  (parserConfig) => {
+    if (parserConfig) {
+      setOptions(parserConfig)
+    }
+  },
+  { immediate: true }
+)
 
 // 初始化
 onMounted(() => {
-  // 初始化主题
-  themeStore.initializeTheme()
+  // 初始化标准
+  ruleStore.initializeRule()
   
   // 设置初始内容
   updateContent()
@@ -148,8 +160,8 @@ onMounted(() => {
         </button>
       </div>
       <div class="toolbar-group">
-        <button @click="switchTheme" class="btn btn-theme">
-          🎨 切换主题: {{ currentThemeName }}
+        <button @click="switchRule" class="btn btn-rule">
+          🎨 切换标准: {{ currentRuleName }}
         </button>
       </div>
     </div>
@@ -191,7 +203,7 @@ onMounted(() => {
         </div>
         <div class="feature-item">
           <span class="feature-icon">✅</span>
-          <span>主题系统</span>
+          <span>标准系统</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">✅</span>
@@ -293,12 +305,12 @@ onMounted(() => {
   box-shadow: 0 4px 8px rgba(72, 187, 120, 0.4);
 }
 
-.btn-theme {
+.btn-rule {
   background: #ed8936;
   color: white;
 }
 
-.btn-theme:hover {
+.btn-rule:hover {
   background: #dd6b20;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(237, 137, 54, 0.4);

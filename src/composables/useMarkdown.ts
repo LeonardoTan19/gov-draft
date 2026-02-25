@@ -7,6 +7,7 @@
 import { watch } from 'vue'
 import { MarkdownParser, type MarkdownOptions } from '../core/parser/markdown-parser'
 import { useDocumentStore } from '../stores/doc'
+import { useRuleStore } from '../stores/rule'
 
 /**
  * useMarkdown 组合式函数
@@ -16,6 +17,7 @@ import { useDocumentStore } from '../stores/doc'
  */
 export function useMarkdown() {
   const docStore = useDocumentStore()
+  const ruleStore = useRuleStore()
   const parser = new MarkdownParser()
 
   /**
@@ -24,14 +26,23 @@ export function useMarkdown() {
    * @returns 渲染后的 HTML 字符串
    */
   const parse = (markdown: string): string => {
-    return parser.parse(markdown)
+    const headingStyles = ruleStore.currentRule
+      ? {
+          h1: ruleStore.currentRule.fonts.heading.h1.numberingStyle,
+          h2: ruleStore.currentRule.fonts.heading.h2.numberingStyle,
+          h3: ruleStore.currentRule.fonts.heading.h3.numberingStyle,
+          h4: ruleStore.currentRule.fonts.heading.h4.numberingStyle
+        }
+      : undefined
+
+    return parser.parse(markdown, headingStyles)
   }
 
   /**
    * 设置 Markdown 解析器选项
    * @param options - 解析器配置选项
    */
-  const setOptions = (options: MarkdownOptions): void => {
+  const setOptions = (options: Partial<MarkdownOptions>): void => {
     parser.setOptions(options)
   }
 

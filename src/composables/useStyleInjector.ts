@@ -1,11 +1,11 @@
 /**
  * useStyleInjector 组合式函数
  * 提供动态样式注入和 CSS 变量更新功能
- * 集成 ThemeStore 实现响应式样式管理
+ * 集成 RuleStore 实现响应式样式管理
  */
 
 import { onUnmounted, watch } from 'vue'
-import { useThemeStore } from '../stores/theme'
+import { useRuleStore } from '../stores/rule'
 
 /**
  * useStyleInjector 组合式函数
@@ -14,7 +14,7 @@ import { useThemeStore } from '../stores/theme'
  * @returns 样式注入相关的方法
  */
 export function useStyleInjector() {
-  const themeStore = useThemeStore()
+  const ruleStore = useRuleStore()
   const injectedStyleIds = new Set<string>()
 
   /**
@@ -89,12 +89,12 @@ export function useStyleInjector() {
   }
 
   watch(
-    () => themeStore.getThemeCssText,
+    () => ruleStore.getRuleCssText,
     (cssText) => {
       if (cssText && cssText.length > 0) {
-        injectStyles(cssText, 'theme-styles')
+        injectStyles(cssText, 'rule-styles')
       } else {
-        removeStyles('theme-styles')
+        removeStyles('rule-styles')
       }
     },
     { immediate: true }

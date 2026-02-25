@@ -8,8 +8,8 @@
 export interface EditorSettings {
   /** 字体大小（像素） */
   fontSize: number
-  /** 编辑器主题 */
-  theme: 'light' | 'dark'
+  /** 编辑器配色模式 */
+  colorMode: 'light' | 'dark'
   /** 是否显示行号 */
   lineNumbers: boolean
   /** 是否自动换行 */
