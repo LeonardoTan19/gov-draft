@@ -6,6 +6,7 @@ import { useStyleInjector } from './composables/useStyleInjector'
 import { useFileSystem } from './composables/useFileSystem'
 import { useMarkdown } from './composables/useMarkdown'
 import A4Paper from './components/Preview/A4Paper.vue'
+import CodeMirror from './components/Editor/CodeMirror.vue'
 
 const docStore = useDocumentStore()
 const ruleStore = useRuleStore()
@@ -14,11 +15,13 @@ const { setOptions } = useMarkdown()
 useStyleInjector()
 
 const editorContent = ref(`# 关于举办宣讲抗战精神学习培训班的通知
-::: body.paragraph.indent:0em
+::: body.paragraph.indent:0em ; body.style.colors.text: '#0000ff'
+    ::: body.style.colors.text: '#ff0000'
 各部门办公室、各直属机构办公室、各地（市）党委办公室：
-:::
-为深入学习贯彻习近平新时代中国特色社会主义思想，弘扬伟大抗战精神，进一步增强党员干部的爱国情怀与使命担当，经省委办公厅研究，决定举办宣讲抗战精神学习培训班。现将有关事项通知如下：
+    :::
 
+为深入学习贯彻习近平新时代中国特色社会主义思想，弘扬伟大抗战精神，进一步增强党员干部的爱国情怀与使命担当，经省委办公厅研究，决定举办宣讲抗战精神学习培训班。现将有关事项通知如下：
+:::
 ## 培训时间与地点
 
 培训时间：2025年10月9日至11日。
@@ -66,9 +69,13 @@ const editorContent = ref(`# 关于举办宣讲抗战精神学习培训班的通
 :::
 
 ::: body.paragraph.align:right
+\
+\
 山北省委政府办公厅
 2025年9月26日
 :::
+
+
 
 `)
 
@@ -205,11 +212,9 @@ onMounted(() => {
           <h2>Markdown 编辑区</h2>
           <span class="panel__tag">实时同步</span>
         </div>
-        <textarea
-          class="editor-textarea"
-          v-model="editorContent"
-          @input="updateContent"
-          placeholder="请输入公文 Markdown 内容"
+        <CodeMirror
+          :model-value="editorContent"
+          @update:model-value="(val: string) => { editorContent = val; updateContent() }"
         />
       </section>
 
