@@ -69,14 +69,9 @@ const editorContent = ref(`# 关于举办宣讲抗战精神学习培训班的通
 :::
 
 ::: body.paragraph.align:right
-\
-\
 山北省委政府办公厅
 2025年9月26日
 :::
-
-
-
 `)
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -210,7 +205,7 @@ onMounted(() => {
       <section class="panel editor-panel">
         <div class="panel__header">
           <h2>Markdown 编辑区</h2>
-          <span class="panel__tag">实时同步</span>
+          <span class="panel__tag">实时同步 · 多层语法糖建议用 Tab 缩进</span>
         </div>
         <CodeMirror
           :model-value="editorContent"
