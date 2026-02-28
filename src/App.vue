@@ -14,7 +14,7 @@ const { setOptions } = useMarkdown()
 useStyleInjector()
 
 const editorContent = ref(`# 关于举办宣讲抗战精神学习培训班的通知
-::: indent:0em
+::: body.paragraph.indent:0em
 各部门办公室、各直属机构办公室、各地（市）党委办公室：
 :::
 为深入学习贯彻习近平新时代中国特色社会主义思想，弘扬伟大抗战精神，进一步增强党员干部的爱国情怀与使命担当，经省委办公厅研究，决定举办宣讲抗战精神学习培训班。现将有关事项通知如下：
@@ -61,14 +61,15 @@ const editorContent = ref(`# 关于举办宣讲抗战精神学习培训班的通
 
 联系电话：18888888888
 
-::: indent:0em
+::: body.paragraph.indent:0em
 附件：参培人员信息会议回执
 :::
 
-::: indent:0em
+::: body.paragraph.align:right
 山北省委政府办公厅
 2025年9月26日
 :::
+
 `)
 
 const fileInput = ref<HTMLInputElement | null>(null)

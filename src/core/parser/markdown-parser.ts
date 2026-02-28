@@ -1,35 +1,19 @@
 import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
-import type { HeadingLevel, LocalStyleTargetPath, ParserConfig } from '../../types/rule';
+import type { HeadingLevel, ParserConfig } from '../../types/rule';
+import { toCssCustomProperty } from '../rule-engine/css-variable';
 
 export type MarkdownOptions = ParserConfig;
 
 type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
 
-type LocalStyleAliasMap = Record<string, LocalStyleTargetPath>;
+type LocalStyleAliasMap = Record<string, string>;
 
-const CSS_LENGTH_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
 const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
-const LOCAL_STYLE_TARGET_TO_VARIABLES: Record<LocalStyleTargetPath, string[]> = {
-  'content.body.paragraph.indent': ['--font-body-indent'],
-  'content.h1.paragraph.indent': ['--font-heading-h1-indent'],
-  'content.h2.paragraph.indent': ['--font-heading-h2-indent'],
-  'content.h3.paragraph.indent': ['--font-heading-h3-indent'],
-  'content.h4.paragraph.indent': ['--font-heading-h4-indent']
-};
-const DEFAULT_LOCAL_STYLE_ALIASES: LocalStyleAliasMap = {
-  indent: 'content.body.paragraph.indent',
-  bodyIndent: 'content.body.paragraph.indent',
-  h1Indent: 'content.h1.paragraph.indent',
-  h2Indent: 'content.h2.paragraph.indent',
-  h3Indent: 'content.h3.paragraph.indent',
-  h4Indent: 'content.h4.paragraph.indent',
-  'content.body.paragraph.indent': 'content.body.paragraph.indent',
-  'content.h1.paragraph.indent': 'content.h1.paragraph.indent',
-  'content.h2.paragraph.indent': 'content.h2.paragraph.indent',
-  'content.h3.paragraph.indent': 'content.h3.paragraph.indent',
-  'content.h4.paragraph.indent': 'content.h4.paragraph.indent'
-};
+const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
+const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
+const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
+const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
 
 const defaultOptions: MarkdownOptions = {
   html: false,
@@ -38,7 +22,7 @@ const defaultOptions: MarkdownOptions = {
   typographer: true,
   headingNumbering: true,
   disabledSyntax: ['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule'],
-  localStyleAliases: DEFAULT_LOCAL_STYLE_ALIASES
+  localStyleAliases: {}
 };
 
 export class MarkdownParser {
@@ -94,6 +78,7 @@ export class MarkdownParser {
     });
 
     this.registerLocalStyleContainer(parser, options.localStyleAliases ?? {});
+    this.registerTextFontScopes(parser);
 
     if (options.disabledSyntax.includes('codeBlock')) {
       parser.disable(['fence', 'code']);
@@ -172,7 +157,7 @@ export class MarkdownParser {
     }
 
     const normalizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
-    if (!CSS_LENGTH_PATTERN.test(normalizedValue)) {
+    if (!normalizedValue) {
       return '';
     }
 
@@ -181,12 +166,8 @@ export class MarkdownParser {
       return '';
     }
 
-    const cssVariables = LOCAL_STYLE_TARGET_TO_VARIABLES[targetPath];
-    if (!cssVariables || cssVariables.length === 0) {
-      return '';
-    }
-
-    return cssVariables.map((cssVariable) => `${cssVariable}: ${normalizedValue};`).join(' ');
+    const cssVariable = toCssCustomProperty(targetPath);
+    return `${cssVariable}: ${normalizedValue};`;
   }
 
   private findDescriptorSeparatorIndex(descriptor: string): number {
@@ -203,21 +184,90 @@ export class MarkdownParser {
     return Math.min(colonIndex, fullWidthColonIndex);
   }
 
-  private resolveLocalStyleTargetPath(key: string, aliasMap: LocalStyleAliasMap): LocalStyleTargetPath | null {
-    if (key in LOCAL_STYLE_TARGET_TO_VARIABLES) {
-      return key as LocalStyleTargetPath;
+  private resolveLocalStyleTargetPath(key: string, aliasMap: LocalStyleAliasMap): string | null {
+    const normalizedKey = key.trim();
+    const aliasTarget = aliasMap[normalizedKey];
+    if (aliasTarget) {
+      const normalizedAliasTarget = aliasTarget.trim();
+      if (!this.isOverridablePath(normalizedAliasTarget)) {
+        return null;
+      }
+      return normalizedAliasTarget;
     }
 
-    const mergedAliasMap: LocalStyleAliasMap = {
-      ...DEFAULT_LOCAL_STYLE_ALIASES,
-      ...aliasMap
+    if (this.isOverridablePath(normalizedKey)) {
+      return normalizedKey;
+    }
+
+    if (normalizedKey.includes('.')) {
+      const canonicalPath = `${LOCAL_STYLE_SCOPE_PREFIX}${normalizedKey}`;
+      if (this.isOverridablePath(canonicalPath)) {
+        return canonicalPath;
+      }
+    }
+
+    return null;
+  }
+
+  private isOverridablePath(path: string): boolean {
+    if (!path.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
+      return false;
+    }
+
+    if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(path)) {
+      return false;
+    }
+
+    return !path
+      .split('.')
+      .some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
+  }
+
+  private registerTextFontScopes(parser: MarkdownIt): void {
+    const fallbackTextRenderer = parser.renderer.rules.text;
+
+    parser.renderer.rules.text = (tokens, index, options, env, self) => {
+      const defaultRenderer = fallbackTextRenderer ?? ((rawTokens, tokenIndex) => self.renderToken(rawTokens, tokenIndex, options));
+      const token = tokens[index];
+      if (!token || token.type !== 'text') {
+        return defaultRenderer(tokens, index, options, env, self);
+      }
+
+      const content = token.content ?? '';
+      if (!content) {
+        return '';
+      }
+
+      return this.wrapTextScopes(content, parser.utils.escapeHtml);
     };
-    const aliasTarget = mergedAliasMap[key];
-    if (!aliasTarget) {
-      return null;
+  }
+
+  private wrapTextScopes(content: string, escapeHtml: (source: string) => string): string {
+    let cursor = 0;
+    let result = '';
+
+    content.replace(TEXT_TOKEN_PATTERN, (matched, offset) => {
+      if (offset > cursor) {
+        result += escapeHtml(content.slice(cursor, offset));
+      }
+
+      if (/^[A-Za-z0-9]+$/.test(matched)) {
+        result += `<span class="latin-text">${escapeHtml(matched)}</span>`;
+      } else if (/^[“”‘’]$/.test(matched)) {
+        result += `<span class="cn-quote">${escapeHtml(matched)}</span>`;
+      } else {
+        result += `<span class="cn-book-title">${escapeHtml(matched)}</span>`;
+      }
+
+      cursor = offset + matched.length;
+      return matched;
+    });
+
+    if (cursor < content.length) {
+      result += escapeHtml(content.slice(cursor));
     }
 
-    return aliasTarget;
+    return result;
   }
 
   private preprocessMarkdown(markdown: string): string {

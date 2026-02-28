@@ -47,7 +47,8 @@ export const GB_PAGE_CONFIG: PageConfig = {
 export const GB_CONTENT_CONFIG: ContentConfig = {
   body: {
     fonts: {
-      family: '仿宋_GB2312, FangSong, STFangsong, serif'
+      latinFamily: 'Times New Roman, serif',
+      cjkFamily: '仿宋_GB2312, FangSong, STFangsong, serif'
     },
     style: {
       size: '16pt',
@@ -66,7 +67,8 @@ export const GB_CONTENT_CONFIG: ContentConfig = {
   },
   h1: {
     fonts: {
-      family: '方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif'
+      latinFamily: 'Times New Roman, serif',
+      cjkFamily: '方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif'
     },
     style: {
       size: '22pt',
@@ -86,7 +88,8 @@ export const GB_CONTENT_CONFIG: ContentConfig = {
   },
   h2: {
     fonts: {
-      family: '黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif'
+      latinFamily: 'Times New Roman, serif',
+      cjkFamily: '黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif'
     },
     style: {
       size: '16pt',
@@ -106,7 +109,8 @@ export const GB_CONTENT_CONFIG: ContentConfig = {
   },
   h3: {
     fonts: {
-      family: '楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif'
+      latinFamily: 'Times New Roman, serif',
+      cjkFamily: '楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif'
     },
     style: {
       size: '16pt',
@@ -126,7 +130,8 @@ export const GB_CONTENT_CONFIG: ContentConfig = {
   },
   h4: {
     fonts: {
-      family: '仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif'
+      latinFamily: 'Times New Roman, serif',
+      cjkFamily: '仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif'
     },
     style: {
       size: '16pt',

@@ -11,15 +11,13 @@ export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 90
 export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
-export type LocalStyleTargetPath =
-  | 'content.body.paragraph.indent'
-  | 'content.h1.paragraph.indent'
-  | 'content.h2.paragraph.indent'
-  | 'content.h3.paragraph.indent'
-  | 'content.h4.paragraph.indent';
+export type LocalStyleTargetPath = string;
 
 export interface TextFontConfig {
-  family: string;
+  latinFamily: string;
+  cjkFamily: string;
+  cnQuoteFamily?: string;
+  cnBookTitleFamily?: string;
 }
 
 export interface TextStyleConfig {

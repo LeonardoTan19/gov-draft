@@ -1,9 +1,12 @@
 import type { AtRule, CompiledRule, RuleConfig, StyleDeclaration, StyleNode, StyleRule } from '../../types/rule';
 import { scopeSelectors } from './css-scope';
+import { toCssCustomProperty } from './css-variable';
 
 const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
 const CSS_PROPERTY_UNSAFE_CHARS = /[{};:\n\r]/g;
 const PARAGRAPH_LINES_PATTERN = /^(-?\d+(\.\d+)?)lines$/;
+
+type ContentLevel = 'body' | 'h1' | 'h2' | 'h3' | 'h4';
 
 export function compileRule(ruleConfig: RuleConfig): CompiledRule {
   const tokens = generateRuleTokens(ruleConfig);
@@ -63,65 +66,55 @@ function normalizeParagraphSpacing(value: string): string {
   return `${lines}em`;
 }
 
+function setToken(tokens: Record<string, string>, path: string, value: unknown): void {
+  tokens[toCssCustomProperty(path)] = sanitizeCssValue(value);
+}
+
+function setParagraphSpacingToken(tokens: Record<string, string>, path: string, value: string): void {
+  tokens[toCssCustomProperty(path)] = normalizeParagraphSpacing(value);
+}
+
+function buildFontFamilyValue(primaryPath: string, fallbackPath: string): string {
+  return `var(${toCssCustomProperty(primaryPath)}, var(${toCssCustomProperty(fallbackPath)}))`;
+}
+
+function buildContentFontPath(level: ContentLevel, suffix: string): string {
+  return `content.${level}.fonts.${suffix}`;
+}
+
 function generateRuleTokens(config: RuleConfig): Record<string, string> {
-  return {
-    '--font-body-family': sanitizeCssValue(config.content.body.fonts.family),
-    '--font-body-size': sanitizeCssValue(config.content.body.style.size),
-    '--font-body-weight': sanitizeCssValue(config.content.body.style.weight),
-    '--font-body-align': sanitizeCssValue(config.content.body.paragraph.align),
-    '--font-body-indent': sanitizeCssValue(config.content.body.paragraph.indent),
-    '--font-body-color': sanitizeCssValue(config.content.body.style.color),
-    '--spacing-body-line-height': sanitizeCssValue(config.content.body.paragraph.spacing.lineHeight),
-    '--spacing-body-before': normalizeParagraphSpacing(config.content.body.paragraph.spacing.before),
-    '--spacing-body-after': normalizeParagraphSpacing(config.content.body.paragraph.spacing.after),
+  const tokens: Record<string, string> = {};
 
-    '--font-heading-h1-family': sanitizeCssValue(config.content.h1.fonts.family),
-    '--font-heading-h2-family': sanitizeCssValue(config.content.h2.fonts.family),
-    '--font-heading-h3-family': sanitizeCssValue(config.content.h3.fonts.family),
-    '--font-heading-h4-family': sanitizeCssValue(config.content.h4.fonts.family),
-    '--font-heading-h1-size': sanitizeCssValue(config.content.h1.style.size),
-    '--font-heading-h2-size': sanitizeCssValue(config.content.h2.style.size),
-    '--font-heading-h3-size': sanitizeCssValue(config.content.h3.style.size),
-    '--font-heading-h4-size': sanitizeCssValue(config.content.h4.style.size),
-    '--font-heading-h1-weight': sanitizeCssValue(config.content.h1.style.weight),
-    '--font-heading-h2-weight': sanitizeCssValue(config.content.h2.style.weight),
-    '--font-heading-h3-weight': sanitizeCssValue(config.content.h3.style.weight),
-    '--font-heading-h4-weight': sanitizeCssValue(config.content.h4.style.weight),
-    '--font-heading-h1-align': sanitizeCssValue(config.content.h1.paragraph.align),
-    '--font-heading-h2-align': sanitizeCssValue(config.content.h2.paragraph.align),
-    '--font-heading-h3-align': sanitizeCssValue(config.content.h3.paragraph.align),
-    '--font-heading-h4-align': sanitizeCssValue(config.content.h4.paragraph.align),
-    '--font-heading-h1-indent': sanitizeCssValue(config.content.h1.paragraph.indent),
-    '--font-heading-h2-indent': sanitizeCssValue(config.content.h2.paragraph.indent),
-    '--font-heading-h3-indent': sanitizeCssValue(config.content.h3.paragraph.indent),
-    '--font-heading-h4-indent': sanitizeCssValue(config.content.h4.paragraph.indent),
-    '--font-heading-h1-color': sanitizeCssValue(config.content.h1.style.color),
-    '--font-heading-h2-color': sanitizeCssValue(config.content.h2.style.color),
-    '--font-heading-h3-color': sanitizeCssValue(config.content.h3.style.color),
-    '--font-heading-h4-color': sanitizeCssValue(config.content.h4.style.color),
-    '--spacing-h1-line-height': sanitizeCssValue(config.content.h1.paragraph.spacing.lineHeight),
-    '--spacing-h2-line-height': sanitizeCssValue(config.content.h2.paragraph.spacing.lineHeight),
-    '--spacing-h3-line-height': sanitizeCssValue(config.content.h3.paragraph.spacing.lineHeight),
-    '--spacing-h4-line-height': sanitizeCssValue(config.content.h4.paragraph.spacing.lineHeight),
-    '--spacing-h1-before': normalizeParagraphSpacing(config.content.h1.paragraph.spacing.before),
-    '--spacing-h2-before': normalizeParagraphSpacing(config.content.h2.paragraph.spacing.before),
-    '--spacing-h3-before': normalizeParagraphSpacing(config.content.h3.paragraph.spacing.before),
-    '--spacing-h4-before': normalizeParagraphSpacing(config.content.h4.paragraph.spacing.before),
-    '--spacing-h1-after': normalizeParagraphSpacing(config.content.h1.paragraph.spacing.after),
-    '--spacing-h2-after': normalizeParagraphSpacing(config.content.h2.paragraph.spacing.after),
-    '--spacing-h3-after': normalizeParagraphSpacing(config.content.h3.paragraph.spacing.after),
-    '--spacing-h4-after': normalizeParagraphSpacing(config.content.h4.paragraph.spacing.after),
+  const levels: ContentLevel[] = ['body', 'h1', 'h2', 'h3', 'h4'];
+  levels.forEach((level) => {
+    const item = config.content[level];
+    setToken(tokens, `content.${level}.fonts.latinFamily`, item.fonts.latinFamily);
+    setToken(tokens, `content.${level}.fonts.cjkFamily`, item.fonts.cjkFamily);
+    setToken(tokens, `content.${level}.fonts.cnQuoteFamily`, item.fonts.cnQuoteFamily ?? item.fonts.cjkFamily);
+    setToken(tokens, `content.${level}.fonts.cnBookTitleFamily`, item.fonts.cnBookTitleFamily ?? item.fonts.cjkFamily);
 
-    '--color-text': sanitizeCssValue(config.colors.text),
-    '--color-background': sanitizeCssValue(config.colors.background),
-    '--color-accent': sanitizeCssValue(config.colors.accent),
-    '--page-size': sanitizeCssValue(config.page.size),
-    '--page-orientation': sanitizeCssValue(config.page.orientation),
-    '--page-margin-top': sanitizeCssValue(config.page.margins.top),
-    '--page-margin-right': sanitizeCssValue(config.page.margins.right),
-    '--page-margin-bottom': sanitizeCssValue(config.page.margins.bottom),
-    '--page-margin-left': sanitizeCssValue(config.page.margins.left)
-  };
+    setToken(tokens, `content.${level}.style.size`, item.style.size);
+    setToken(tokens, `content.${level}.style.weight`, item.style.weight);
+    setToken(tokens, `content.${level}.style.color`, item.style.color);
+
+    setToken(tokens, `content.${level}.paragraph.align`, item.paragraph.align);
+    setToken(tokens, `content.${level}.paragraph.indent`, item.paragraph.indent);
+    setToken(tokens, `content.${level}.paragraph.spacing.lineHeight`, item.paragraph.spacing.lineHeight);
+    setParagraphSpacingToken(tokens, `content.${level}.paragraph.spacing.before`, item.paragraph.spacing.before);
+    setParagraphSpacingToken(tokens, `content.${level}.paragraph.spacing.after`, item.paragraph.spacing.after);
+  });
+
+  setToken(tokens, 'colors.text', config.colors.text);
+  setToken(tokens, 'colors.background', config.colors.background);
+  setToken(tokens, 'colors.accent', config.colors.accent);
+  setToken(tokens, 'page.size', config.page.size);
+  setToken(tokens, 'page.orientation', config.page.orientation);
+  setToken(tokens, 'page.margins.top', config.page.margins.top);
+  setToken(tokens, 'page.margins.right', config.page.margins.right);
+  setToken(tokens, 'page.margins.bottom', config.page.margins.bottom);
+  setToken(tokens, 'page.margins.left', config.page.margins.left);
+
+  return tokens;
 }
 
 function mapTokensToDeclarations(tokens: Record<string, string>): StyleDeclaration[] {
@@ -137,75 +130,156 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
 
   rules.push(
     styleRule(textTargets, [
-      declaration('font-family', 'var(--font-body-family)'),
-      declaration('font-size', 'var(--font-body-size)'),
-      declaration('font-weight', 'var(--font-body-weight)'),
-      declaration('line-height', 'var(--spacing-body-line-height)'),
-      declaration('color', 'var(--font-body-color)'),
-      declaration('background-color', 'var(--color-background)')
+      declaration('font-family', `var(${toCssCustomProperty('content.body.fonts.cjkFamily')})`),
+      declaration('font-size', `var(${toCssCustomProperty('content.body.style.size')})`),
+      declaration('font-weight', `var(${toCssCustomProperty('content.body.style.weight')})`),
+      declaration('line-height', `var(${toCssCustomProperty('content.body.paragraph.spacing.lineHeight')})`),
+      declaration('color', `var(${toCssCustomProperty('content.body.style.color')})`),
+      declaration('background-color', `var(${toCssCustomProperty('colors.background')})`)
+    ])
+  );
+
+  rules.push(
+    styleRule(scopeSelectors(['.latin-text'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('body', 'latinFamily'), buildContentFontPath('body', 'cjkFamily')))
+    ])
+  );
+
+  rules.push(
+    styleRule(scopeSelectors(['.cn-quote'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('body', 'cnQuoteFamily'), buildContentFontPath('body', 'cjkFamily')))
+    ])
+  );
+
+  rules.push(
+    styleRule(scopeSelectors(['.cn-book-title'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('body', 'cnBookTitleFamily'), buildContentFontPath('body', 'cjkFamily')))
     ])
   );
 
   rules.push(
     styleRule(scopeSelectors(['p'], textScopeRoots), [
-      declaration('margin-top', 'var(--spacing-body-before)'),
-      declaration('margin-bottom', 'var(--spacing-body-after)'),
-      declaration('text-indent', 'var(--font-body-indent)'),
-      declaration('text-align', 'var(--font-body-align)'),
-      declaration('line-height', 'var(--spacing-body-line-height)')
+      declaration('margin-top', `var(${toCssCustomProperty('content.body.paragraph.spacing.before')})`),
+      declaration('margin-bottom', `var(${toCssCustomProperty('content.body.paragraph.spacing.after')})`),
+      declaration('text-indent', `var(${toCssCustomProperty('content.body.paragraph.indent')})`),
+      declaration('text-align', `var(${toCssCustomProperty('content.body.paragraph.align')})`),
+      declaration('line-height', `var(${toCssCustomProperty('content.body.paragraph.spacing.lineHeight')})`)
     ])
   );
 
   rules.push(
     styleRule(scopeSelectors(['h1'], textScopeRoots), [
-      declaration('font-family', 'var(--font-heading-h1-family)'),
-      declaration('font-size', 'var(--font-heading-h1-size)'),
-      declaration('font-weight', 'var(--font-heading-h1-weight)'),
-      declaration('text-align', 'var(--font-heading-h1-align)'),
-      declaration('text-indent', 'var(--font-heading-h1-indent)'),
-      declaration('line-height', 'var(--spacing-h1-line-height)'),
-      declaration('color', 'var(--font-heading-h1-color)'),
-      declaration('margin-top', 'var(--spacing-h1-before)'),
-      declaration('margin-bottom', 'var(--spacing-h1-after)')
+      declaration('font-family', `var(${toCssCustomProperty('content.h1.fonts.cjkFamily')})`),
+      declaration('font-size', `var(${toCssCustomProperty('content.h1.style.size')})`),
+      declaration('font-weight', `var(${toCssCustomProperty('content.h1.style.weight')})`),
+      declaration('text-align', `var(${toCssCustomProperty('content.h1.paragraph.align')})`),
+      declaration('text-indent', `var(${toCssCustomProperty('content.h1.paragraph.indent')})`),
+      declaration('line-height', `var(${toCssCustomProperty('content.h1.paragraph.spacing.lineHeight')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h1.style.color')})`),
+      declaration('margin-top', `var(${toCssCustomProperty('content.h1.paragraph.spacing.before')})`),
+      declaration('margin-bottom', `var(${toCssCustomProperty('content.h1.paragraph.spacing.after')})`)
     ])
   );
   rules.push(
     styleRule(scopeSelectors(['h2'], textScopeRoots), [
-      declaration('font-family', 'var(--font-heading-h2-family)'),
-      declaration('font-size', 'var(--font-heading-h2-size)'),
-      declaration('font-weight', 'var(--font-heading-h2-weight)'),
-      declaration('text-align', 'var(--font-heading-h2-align)'),
-      declaration('text-indent', 'var(--font-heading-h2-indent)'),
-      declaration('line-height', 'var(--spacing-h2-line-height)'),
-      declaration('color', 'var(--font-heading-h2-color)'),
-      declaration('margin-top', 'var(--spacing-h2-before)'),
-      declaration('margin-bottom', 'var(--spacing-h2-after)')
+      declaration('font-family', `var(${toCssCustomProperty('content.h2.fonts.cjkFamily')})`),
+      declaration('font-size', `var(${toCssCustomProperty('content.h2.style.size')})`),
+      declaration('font-weight', `var(${toCssCustomProperty('content.h2.style.weight')})`),
+      declaration('text-align', `var(${toCssCustomProperty('content.h2.paragraph.align')})`),
+      declaration('text-indent', `var(${toCssCustomProperty('content.h2.paragraph.indent')})`),
+      declaration('line-height', `var(${toCssCustomProperty('content.h2.paragraph.spacing.lineHeight')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h2.style.color')})`),
+      declaration('margin-top', `var(${toCssCustomProperty('content.h2.paragraph.spacing.before')})`),
+      declaration('margin-bottom', `var(${toCssCustomProperty('content.h2.paragraph.spacing.after')})`)
     ])
   );
   rules.push(
     styleRule(scopeSelectors(['h3'], textScopeRoots), [
-      declaration('font-family', 'var(--font-heading-h3-family)'),
-      declaration('font-size', 'var(--font-heading-h3-size)'),
-      declaration('font-weight', 'var(--font-heading-h3-weight)'),
-      declaration('text-align', 'var(--font-heading-h3-align)'),
-      declaration('text-indent', 'var(--font-heading-h3-indent)'),
-      declaration('line-height', 'var(--spacing-h3-line-height)'),
-      declaration('color', 'var(--font-heading-h3-color)'),
-      declaration('margin-top', 'var(--spacing-h3-before)'),
-      declaration('margin-bottom', 'var(--spacing-h3-after)')
+      declaration('font-family', `var(${toCssCustomProperty('content.h3.fonts.cjkFamily')})`),
+      declaration('font-size', `var(${toCssCustomProperty('content.h3.style.size')})`),
+      declaration('font-weight', `var(${toCssCustomProperty('content.h3.style.weight')})`),
+      declaration('text-align', `var(${toCssCustomProperty('content.h3.paragraph.align')})`),
+      declaration('text-indent', `var(${toCssCustomProperty('content.h3.paragraph.indent')})`),
+      declaration('line-height', `var(${toCssCustomProperty('content.h3.paragraph.spacing.lineHeight')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h3.style.color')})`),
+      declaration('margin-top', `var(${toCssCustomProperty('content.h3.paragraph.spacing.before')})`),
+      declaration('margin-bottom', `var(${toCssCustomProperty('content.h3.paragraph.spacing.after')})`)
     ])
   );
   rules.push(
     styleRule(scopeSelectors(['h4', 'h5', 'h6'], textScopeRoots), [
-      declaration('font-family', 'var(--font-heading-h4-family)'),
-      declaration('font-size', 'var(--font-heading-h4-size)'),
-      declaration('font-weight', 'var(--font-heading-h4-weight)'),
-      declaration('text-align', 'var(--font-heading-h4-align)'),
-      declaration('text-indent', 'var(--font-heading-h4-indent)'),
-      declaration('line-height', 'var(--spacing-h4-line-height)'),
-      declaration('color', 'var(--font-heading-h4-color)'),
-      declaration('margin-top', 'var(--spacing-h4-before)'),
-      declaration('margin-bottom', 'var(--spacing-h4-after)')
+      declaration('font-family', `var(${toCssCustomProperty('content.h4.fonts.cjkFamily')})`),
+      declaration('font-size', `var(${toCssCustomProperty('content.h4.style.size')})`),
+      declaration('font-weight', `var(${toCssCustomProperty('content.h4.style.weight')})`),
+      declaration('text-align', `var(${toCssCustomProperty('content.h4.paragraph.align')})`),
+      declaration('text-indent', `var(${toCssCustomProperty('content.h4.paragraph.indent')})`),
+      declaration('line-height', `var(${toCssCustomProperty('content.h4.paragraph.spacing.lineHeight')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h4.style.color')})`),
+      declaration('margin-top', `var(${toCssCustomProperty('content.h4.paragraph.spacing.before')})`),
+      declaration('margin-bottom', `var(${toCssCustomProperty('content.h4.paragraph.spacing.after')})`)
+    ])
+  );
+
+  rules.push(
+    styleRule(scopeSelectors(['h1 .latin-text'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h1', 'latinFamily'), buildContentFontPath('h1', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h2 .latin-text'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h2', 'latinFamily'), buildContentFontPath('h2', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h3 .latin-text'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h3', 'latinFamily'), buildContentFontPath('h3', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h4 .latin-text', 'h5 .latin-text', 'h6 .latin-text'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h4', 'latinFamily'), buildContentFontPath('h4', 'cjkFamily')))
+    ])
+  );
+
+  rules.push(
+    styleRule(scopeSelectors(['h1 .cn-quote'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h1', 'cnQuoteFamily'), buildContentFontPath('h1', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h2 .cn-quote'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h2', 'cnQuoteFamily'), buildContentFontPath('h2', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h3 .cn-quote'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h3', 'cnQuoteFamily'), buildContentFontPath('h3', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h4 .cn-quote', 'h5 .cn-quote', 'h6 .cn-quote'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h4', 'cnQuoteFamily'), buildContentFontPath('h4', 'cjkFamily')))
+    ])
+  );
+
+  rules.push(
+    styleRule(scopeSelectors(['h1 .cn-book-title'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h1', 'cnBookTitleFamily'), buildContentFontPath('h1', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h2 .cn-book-title'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h2', 'cnBookTitleFamily'), buildContentFontPath('h2', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h3 .cn-book-title'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h3', 'cnBookTitleFamily'), buildContentFontPath('h3', 'cjkFamily')))
+    ])
+  );
+  rules.push(
+    styleRule(scopeSelectors(['h4 .cn-book-title', 'h5 .cn-book-title', 'h6 .cn-book-title'], textScopeRoots), [
+      declaration('font-family', buildFontFamilyValue(buildContentFontPath('h4', 'cnBookTitleFamily'), buildContentFontPath('h4', 'cjkFamily')))
     ])
   );
 
@@ -213,7 +287,10 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
     atRule('page', {
       declarations: [
         declaration('size', `${sanitizeCssValue(config.page.size)} ${sanitizeCssValue(config.page.orientation)}`),
-        declaration('margin', 'var(--page-margin-top) var(--page-margin-right) var(--page-margin-bottom) var(--page-margin-left)')
+        declaration(
+          'margin',
+          `var(${toCssCustomProperty('page.margins.top')}) var(${toCssCustomProperty('page.margins.right')}) var(${toCssCustomProperty('page.margins.bottom')}) var(${toCssCustomProperty('page.margins.left')})`
+        )
       ]
     })
   );
@@ -227,7 +304,10 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
         atRule('page', {
           declarations: [
             declaration('size', `${sanitizeCssValue(config.page.size)} ${sanitizeCssValue(config.page.orientation)}`),
-            declaration('margin', 'var(--page-margin-top) var(--page-margin-right) var(--page-margin-bottom) var(--page-margin-left)')
+            declaration(
+              'margin',
+              `var(${toCssCustomProperty('page.margins.top')}) var(${toCssCustomProperty('page.margins.right')}) var(${toCssCustomProperty('page.margins.bottom')}) var(${toCssCustomProperty('page.margins.left')})`
+            )
           ]
         }),
         styleRule(scopeSelectors(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], ['.export-document']), [declaration('page-break-after', 'avoid')]),

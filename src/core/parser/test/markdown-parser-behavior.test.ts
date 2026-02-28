@@ -20,9 +20,9 @@ describe('MarkdownParser behavior', () => {
     expect(html).not.toContain('<pre>')
     expect(html).not.toContain('<code>')
 
-    expect(html).toContain('列表项A')
-    expect(html).toContain('引用A')
-    expect(html).toContain('const value = 1')
+    expect(html).toContain('列表项<span class="latin-text">A</span>')
+    expect(html).toContain('引用<span class="latin-text">A</span>')
+    expect(html).toContain('<span class="latin-text">const</span> <span class="latin-text">value</span> = <span class="latin-text">1</span>')
   })
 
   it('does not auto number heading when numberingStyle is empty', () => {
@@ -37,14 +37,14 @@ describe('MarkdownParser behavior', () => {
     const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
 
     const html = parser.parse('## 缺占位符', { h2: '第' })
-    expect(html).toContain('<h2>第1缺占位符</h2>')
+    expect(html).toContain('<h2>第<span class="latin-text">1</span>缺占位符</h2>')
   })
 
   it('replaces all occurrences when template contains multiple {number}', () => {
     const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
 
     const html = parser.parse('## 多占位符', { h2: '{number}-{number} ' })
-    expect(html).toContain('<h2>1-1多占位符</h2>')
+    expect(html).toContain('<h2><span class="latin-text">1</span>-<span class="latin-text">1</span>多占位符</h2>')
   })
 
   it('does not number when template is only whitespace', () => {
@@ -75,7 +75,7 @@ describe('MarkdownParser behavior', () => {
 
     expect(html).toContain('<h2>一、汉字序号</h2>')
     expect(html).toContain('<h3>（壹）大写序号</h3>')
-    expect(html).toContain('<h4>1.数字序号</h4>')
+    expect(html).toContain('<h4><span class="latin-text">1</span>.数字序号</h4>')
   })
 
   it('supports local style container with canonical path syntax', () => {
@@ -85,8 +85,28 @@ describe('MarkdownParser behavior', () => {
     const html = parser.parse(markdown)
 
     expect(html).toContain('class="local-style-container"')
-    expect(html).toContain('--font-body-indent: 0em;')
-    expect(html).toContain('<p>段落A</p>')
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('<p>段落<span class="latin-text">A</span></p>')
+  })
+
+  it('supports sugar path without content prefix for dynamic overrides', () => {
+    const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
+
+    const markdown = ['::: h2.style.size: 14pt', '## 标题E', ':::'].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('class="local-style-container"')
+    expect(html).toContain('--content-h2-style-size: 14pt;')
+  })
+
+  it('supports non-length value override for dynamic style path', () => {
+    const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
+
+    const markdown = ['::: body.style.color: #FF0000', '段落E', ':::'].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('class="local-style-container"')
+    expect(html).toContain('--content-body-style-color: #FF0000;')
   })
 
   it('supports local style container with alias syntax', () => {
@@ -102,29 +122,41 @@ describe('MarkdownParser behavior', () => {
     const html = parser.parse(markdown)
 
     expect(html).toContain('class="local-style-container"')
-    expect(html).toContain('--font-body-indent: 1em;')
-    expect(html).toContain('<p>段落B</p>')
+    expect(html).toContain('--content-body-paragraph-indent: 1em;')
+    expect(html).toContain('<p>段落<span class="latin-text">B</span></p>')
   })
 
-  it('supports built-in bodyIndent alias without parser alias config', () => {
+  it('does not support built-in old aliases without parser alias config', () => {
     const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
 
     const markdown = ['::: bodyIndent: 0em', '段落C', ':::'].join('\n')
     const html = parser.parse(markdown)
 
-    expect(html).toContain('class="local-style-container"')
-    expect(html).toContain('--font-body-indent: 0em;')
-    expect(html).toContain('<p>段落C</p>')
+    expect(html).not.toContain('class="local-style-container"')
+    expect(html).toContain('<span class="latin-text">bodyIndent</span>: <span class="latin-text">0em</span>')
+    expect(html).toContain('段落<span class="latin-text">C</span>')
   })
 
   it('supports full-width colon in local style descriptor', () => {
     const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
 
-    const markdown = ['::: indent： 0em', '段落D', ':::'].join('\n')
+    const markdown = ['::: content.body.paragraph.indent： 0em', '段落D', ':::'].join('\n')
     const html = parser.parse(markdown)
 
     expect(html).toContain('class="local-style-container"')
-    expect(html).toContain('--font-body-indent: 0em;')
-    expect(html).toContain('<p>段落D</p>')
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('<p>段落<span class="latin-text">D</span></p>')
+  })
+
+  it('wraps latin letters and chinese quote symbols with dedicated spans', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const html = parser.parse('ABC“测试”《公文》')
+
+    expect(html).toContain('<span class="latin-text">ABC</span>')
+    expect(html).toContain('<span class="cn-quote">“</span>')
+    expect(html).toContain('<span class="cn-quote">”</span>')
+    expect(html).toContain('<span class="cn-book-title">《</span>')
+    expect(html).toContain('<span class="cn-book-title">》</span>')
   })
 })

@@ -15,7 +15,7 @@ describe('validateRule', () => {
       headingNumbering: 'true',
       disabledSyntax: ['codeBlock', 'badSyntax'],
       localStyleAliases: {
-        bodyIndent: 'content.body.badField'
+        bodyIndent: 'content.body.bad field'
       }
     }
 
@@ -25,7 +25,7 @@ describe('validateRule', () => {
       expect.arrayContaining([
         'parser.headingNumbering: 必须是布尔值',
         'parser.disabledSyntax.1: 包含非法语法项',
-        'parser.localStyleAliases.bodyIndent: 目标路径非法'
+        'parser.localStyleAliases.bodyIndent: 目标路径格式非法（需为点分层级路径）'
       ])
     )
   })

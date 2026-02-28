@@ -7,13 +7,9 @@ const CSS_COLOR_PATTERN = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb
 const FONT_WEIGHT_SET = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
 const ALIGN_SET = new Set(['left', 'center', 'right', 'justify']);
 const DISABLED_SYNTAX_SET = new Set(['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule']);
-const LOCAL_STYLE_TARGET_SET = new Set([
-  'content.body.paragraph.indent',
-  'content.h1.paragraph.indent',
-  'content.h2.paragraph.indent',
-  'content.h3.paragraph.indent',
-  'content.h4.paragraph.indent'
-]);
+const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
+const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
+const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -124,7 +120,14 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
   if (!isObject(contentItem.fonts)) {
     pushError(issues, `${path}.fonts`, '字段缺失或类型错误');
   } else {
-    validateString(contentItem.fonts.family, `${path}.fonts.family`, issues);
+    validateString(contentItem.fonts.latinFamily, `${path}.fonts.latinFamily`, issues);
+    validateString(contentItem.fonts.cjkFamily, `${path}.fonts.cjkFamily`, issues);
+    if (contentItem.fonts.cnQuoteFamily !== undefined) {
+      validateString(contentItem.fonts.cnQuoteFamily, `${path}.fonts.cnQuoteFamily`, issues);
+    }
+    if (contentItem.fonts.cnBookTitleFamily !== undefined) {
+      validateString(contentItem.fonts.cnBookTitleFamily, `${path}.fonts.cnBookTitleFamily`, issues);
+    }
   }
 
   if (!isObject(contentItem.style)) {
@@ -247,8 +250,25 @@ function validateParser(parser: unknown, issues: ValidationIssue[]): void {
           return;
         }
 
-        if (typeof target !== 'string' || !LOCAL_STYLE_TARGET_SET.has(target)) {
-          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径非法');
+        if (typeof target !== 'string') {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径必须是字符串');
+          return;
+        }
+
+        const normalizedTarget = target.trim();
+        if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(normalizedTarget)) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径格式非法（需为点分层级路径）');
+          return;
+        }
+
+        if (!normalizedTarget.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径必须在 content.* 范围内');
+          return;
+        }
+
+        const hasUnsafeSegment = normalizedTarget.split('.').some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
+        if (hasUnsafeSegment) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径包含不安全字段');
         }
       });
     }
