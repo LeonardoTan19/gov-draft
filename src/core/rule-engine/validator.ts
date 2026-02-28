@@ -2,10 +2,18 @@ import type { ValidationIssue, ValidationResult } from '../../types/rule';
 
 const CSS_LENGTH_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
 const CSS_LINE_HEIGHT_PATTERN = /^-?\d+(\.\d+)?$|^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
+const CSS_PARAGRAPH_SPACING_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$|^-?\d+(\.\d+)?lines$/;
 const CSS_COLOR_PATTERN = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\(.+\)|rgba\(.+\)|hsl\(.+\)|hsla\(.+\))$/;
 const FONT_WEIGHT_SET = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
 const ALIGN_SET = new Set(['left', 'center', 'right', 'justify']);
 const DISABLED_SYNTAX_SET = new Set(['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule']);
+const LOCAL_STYLE_TARGET_SET = new Set([
+  'content.body.paragraph.indent',
+  'content.h1.paragraph.indent',
+  'content.h2.paragraph.indent',
+  'content.h3.paragraph.indent',
+  'content.h4.paragraph.indent'
+]);
 
 type AnyRecord = Record<string, unknown>;
 
@@ -27,8 +35,7 @@ export function validateRule(ruleConfig: unknown): ValidationResult {
   validateString(rule.name, 'name', issues);
   validateString(rule.version, 'version', issues);
 
-  validateFonts(rule.fonts, issues);
-  validateSpacing(rule.spacing, issues);
+  validateContent(rule.content, issues);
   validateColors(rule.colors, issues);
   validatePage(rule.page, issues);
   validateParser(rule.parser, issues);
@@ -78,6 +85,12 @@ function validateCssLineHeight(value: unknown, path: string, issues: ValidationI
   }
 }
 
+function validateCssParagraphSpacing(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value !== 'string' || !CSS_PARAGRAPH_SPACING_PATTERN.test(value.trim())) {
+    pushError(issues, path, '必须是合法段间距（支持长度值、0、或 Nlines）');
+  }
+}
+
 function validateCssColor(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || !CSS_COLOR_PATTERN.test(value.trim())) {
     pushError(issues, path, '必须是合法颜色值（hex/rgb/rgba/hsl/hsla）');
@@ -102,59 +115,57 @@ function validateBoolean(value: unknown, path: string, issues: ValidationIssue[]
   }
 }
 
-function validateTextFont(font: unknown, path: string, issues: ValidationIssue[]): void {
-  if (!isObject(font)) {
+function validateContentItem(contentItem: unknown, path: string, issues: ValidationIssue[]): void {
+  if (!isObject(contentItem)) {
     pushError(issues, path, '字段缺失或类型错误');
     return;
   }
 
-  validateString(font.family, `${path}.family`, issues);
-  validateCssLength(font.size, `${path}.size`, issues);
-  validateFontWeight(font.weight, `${path}.weight`, issues);
-  validateBoolean(font.bold, `${path}.bold`, issues);
-  validateTextAlign(font.align, `${path}.align`, issues);
-}
-
-function validateHeadingFont(font: unknown, path: string, issues: ValidationIssue[]): void {
-  validateTextFont(font, path, issues);
-  if (!isObject(font)) {
-    return;
+  if (!isObject(contentItem.fonts)) {
+    pushError(issues, `${path}.fonts`, '字段缺失或类型错误');
+  } else {
+    validateString(contentItem.fonts.family, `${path}.fonts.family`, issues);
   }
 
-  if (font.numberingStyle !== undefined && typeof font.numberingStyle !== 'string') {
+  if (!isObject(contentItem.style)) {
+    pushError(issues, `${path}.style`, '字段缺失或类型错误');
+  } else {
+    validateCssLength(contentItem.style.size, `${path}.style.size`, issues);
+    validateFontWeight(contentItem.style.weight, `${path}.style.weight`, issues);
+    validateCssColor(contentItem.style.color, `${path}.style.color`, issues);
+  }
+
+  if (!isObject(contentItem.paragraph)) {
+    pushError(issues, `${path}.paragraph`, '字段缺失或类型错误');
+  } else {
+    validateTextAlign(contentItem.paragraph.align, `${path}.paragraph.align`, issues);
+    validateCssLength(contentItem.paragraph.indent, `${path}.paragraph.indent`, issues);
+
+    if (!isObject(contentItem.paragraph.spacing)) {
+      pushError(issues, `${path}.paragraph.spacing`, '字段缺失或类型错误');
+    } else {
+      validateCssLineHeight(contentItem.paragraph.spacing.lineHeight, `${path}.paragraph.spacing.lineHeight`, issues);
+      validateCssParagraphSpacing(contentItem.paragraph.spacing.before, `${path}.paragraph.spacing.before`, issues);
+      validateCssParagraphSpacing(contentItem.paragraph.spacing.after, `${path}.paragraph.spacing.after`, issues);
+    }
+  }
+
+  if (contentItem.numberingStyle !== undefined && typeof contentItem.numberingStyle !== 'string') {
     pushError(issues, `${path}.numberingStyle`, '必须是字符串');
   }
 }
 
-function validateFonts(fonts: unknown, issues: ValidationIssue[]): void {
-  if (!isObject(fonts)) {
-    pushError(issues, 'fonts', '字段缺失或类型错误');
+function validateContent(content: unknown, issues: ValidationIssue[]): void {
+  if (!isObject(content)) {
+    pushError(issues, 'content', '字段缺失或类型错误');
     return;
   }
 
-  validateTextFont(fonts.body, 'fonts.body', issues);
-
-  if (!isObject(fonts.heading)) {
-    pushError(issues, 'fonts.heading', '字段缺失或类型错误');
-    return;
-  }
-
-  validateHeadingFont(fonts.heading.h1, 'fonts.heading.h1', issues);
-  validateHeadingFont(fonts.heading.h2, 'fonts.heading.h2', issues);
-  validateHeadingFont(fonts.heading.h3, 'fonts.heading.h3', issues);
-  validateHeadingFont(fonts.heading.h4, 'fonts.heading.h4', issues);
-}
-
-function validateSpacing(spacing: unknown, issues: ValidationIssue[]): void {
-  if (!isObject(spacing)) {
-    pushError(issues, 'spacing', '字段缺失或类型错误');
-    return;
-  }
-
-  validateCssLineHeight(spacing.lineHeight, 'spacing.lineHeight', issues);
-  validateCssLength(spacing.paragraphSpacing, 'spacing.paragraphSpacing', issues);
-  validateCssLength(spacing.indent, 'spacing.indent', issues);
-  validateBoolean(spacing.headingParagraphBreak, 'spacing.headingParagraphBreak', issues);
+  validateContentItem(content.body, 'content.body', issues);
+  validateContentItem(content.h1, 'content.h1', issues);
+  validateContentItem(content.h2, 'content.h2', issues);
+  validateContentItem(content.h3, 'content.h3', issues);
+  validateContentItem(content.h4, 'content.h4', issues);
 }
 
 function validateColors(colors: unknown, issues: ValidationIssue[]): void {
@@ -201,6 +212,19 @@ function validateParser(parser: unknown, issues: ValidationIssue[]): void {
     return;
   }
 
+  if (parser.html !== undefined) {
+    validateBoolean(parser.html, 'parser.html', issues);
+  }
+  if (parser.breaks !== undefined) {
+    validateBoolean(parser.breaks, 'parser.breaks', issues);
+  }
+  if (parser.linkify !== undefined) {
+    validateBoolean(parser.linkify, 'parser.linkify', issues);
+  }
+  if (parser.typographer !== undefined) {
+    validateBoolean(parser.typographer, 'parser.typographer', issues);
+  }
+
   validateBoolean(parser.headingNumbering, 'parser.headingNumbering', issues);
 
   if (!Array.isArray(parser.disabledSyntax)) {
@@ -211,5 +235,22 @@ function validateParser(parser: unknown, issues: ValidationIssue[]): void {
         pushError(issues, `parser.disabledSyntax.${index}`, '包含非法语法项');
       }
     });
+  }
+
+  if (parser.localStyleAliases !== undefined) {
+    if (!isObject(parser.localStyleAliases)) {
+      pushError(issues, 'parser.localStyleAliases', '必须是对象');
+    } else {
+      Object.entries(parser.localStyleAliases).forEach(([alias, target]) => {
+        if (alias.trim().length === 0) {
+          pushError(issues, 'parser.localStyleAliases', '别名键不能为空');
+          return;
+        }
+
+        if (typeof target !== 'string' || !LOCAL_STYLE_TARGET_SET.has(target)) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径非法');
+        }
+      });
+    }
   }
 }

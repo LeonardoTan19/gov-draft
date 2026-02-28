@@ -6,38 +6,53 @@ export type CssLengthUnit = 'mm' | 'cm' | 'in' | 'pt' | 'px' | 'em' | 'rem' | '%
 export type CssLength = `${number}${CssLengthUnit}` | '0';
 export type CssColor = `#${string}` | `rgb(${string})` | `rgba(${string})` | `hsl(${string})` | `hsla(${string})`;
 export type CssLineHeight = `${number}` | CssLength;
+export type CssParagraphSpacing = CssLength | `${number}lines`;
 export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
 export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
+export type LocalStyleTargetPath =
+  | 'content.body.paragraph.indent'
+  | 'content.h1.paragraph.indent'
+  | 'content.h2.paragraph.indent'
+  | 'content.h3.paragraph.indent'
+  | 'content.h4.paragraph.indent';
 
 export interface TextFontConfig {
   family: string;
-  size: CssLength;
-  weight: FontWeightValue;
-  bold: boolean;
-  align: TextAlign;
 }
 
-export interface HeadingFontConfig extends TextFontConfig {
+export interface TextStyleConfig {
+  size: CssLength;
+  weight: FontWeightValue;
+  color: CssColor;
+}
+
+export interface ParagraphSpacingConfig {
+  lineHeight: CssLineHeight;
+  before: CssParagraphSpacing;
+  after: CssParagraphSpacing;
+}
+
+export interface ParagraphConfig {
+  align: TextAlign;
+  indent: CssLength;
+  spacing: ParagraphSpacingConfig;
+}
+
+export interface ContentItemConfig {
+  fonts: TextFontConfig;
+  style: TextStyleConfig;
+  paragraph: ParagraphConfig;
   numberingStyle?: string;
 }
 
-export interface FontConfig {
-  body: TextFontConfig;
-  heading: {
-    h1: HeadingFontConfig;
-    h2: HeadingFontConfig;
-    h3: HeadingFontConfig;
-    h4: HeadingFontConfig;
-  };
-}
-
-export interface SpacingConfig {
-  lineHeight: CssLineHeight;
-  paragraphSpacing: CssLength;
-  indent: CssLength;
-  headingParagraphBreak: boolean;
+export interface ContentConfig {
+  body: ContentItemConfig;
+  h1: ContentItemConfig;
+  h2: ContentItemConfig;
+  h3: ContentItemConfig;
+  h4: ContentItemConfig;
 }
 
 export interface ColorConfig {
@@ -64,6 +79,7 @@ export interface ParserConfig {
   typographer?: boolean;
   headingNumbering: boolean;
   disabledSyntax: DisabledSyntax[];
+  localStyleAliases?: Record<string, LocalStyleTargetPath>;
 }
 
 export interface StyleDeclaration {
@@ -91,8 +107,7 @@ export interface RuleConfig {
   name: string;
   version: string;
   description?: string;
-  fonts: FontConfig;
-  spacing: SpacingConfig;
+  content: ContentConfig;
   colors: ColorConfig;
   page: PageConfig;
   parser: ParserConfig;
@@ -121,8 +136,7 @@ export interface Rule {
   name: string;
   version: string;
   description?: string;
-  fonts: FontConfig;
-  spacing: SpacingConfig;
+  content: ContentConfig;
   colors: ColorConfig;
   page: PageConfig;
   parser: ParserConfig;

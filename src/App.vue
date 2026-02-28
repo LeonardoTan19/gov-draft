@@ -5,81 +5,91 @@ import { useRuleStore } from './stores/rule'
 import { useStyleInjector } from './composables/useStyleInjector'
 import { useFileSystem } from './composables/useFileSystem'
 import { useMarkdown } from './composables/useMarkdown'
+import A4Paper from './components/Preview/A4Paper.vue'
 
 const docStore = useDocumentStore()
 const ruleStore = useRuleStore()
-const { exportMarkdown, exportHtml, importFile } = useFileSystem()
+const { exportMarkdown, exportHtml, exportPdf, importFile } = useFileSystem()
 const { setOptions } = useMarkdown()
 useStyleInjector()
 
-// 编辑器内容
-const editorContent = ref(`# gov-draft 公文排版系统演示
+const editorContent = ref(`# 关于举办宣讲抗战精神学习培训班的通知
+::: indent:0em
+各部门办公室、各直属机构办公室、各地（市）党委办公室：
+:::
+为深入学习贯彻习近平新时代中国特色社会主义思想，弘扬伟大抗战精神，进一步增强党员干部的爱国情怀与使命担当，经省委办公厅研究，决定举办宣讲抗战精神学习培训班。现将有关事项通知如下：
 
-## 系统简介
+## 培训时间与地点
 
-这是一个基于 Vue 3 + TypeScript 的公文排版系统，符合 GB/T 9704-2012 国家标准。
+培训时间：2025年10月9日至11日。
 
-## 已实现功能
+培训地点：省委会议中心。
 
-### 1. Markdown 解析
-- 支持标题、列表、强调等基本语法
-- 实时预览渲染结果
+## 培训内容
 
-### 2. 标准系统
-- 内置国标标准
-- 支持标准切换
-- 动态样式注入
+### 省委常委、秘书长XXX同志出席开班式并讲话；
 
-### 3. 状态管理
-- 文档状态管理
-- 标准配置管理
-- 设置持久化
+### 集中观看“习近平总书记在纪念中国人民抗日战争暨世界反法西斯战争胜利80周年大会上的重要讲话”视频资料，并组织研讨；
 
-### 4. 文件操作
-- 导入 Markdown 文件
-- 导出 Markdown/HTML
-- 拖放文件支持
+### 专家讲座
 
-## 示例内容
+#### 中共中央党校副校长XXX同志作“习近平总书记关于弘扬伟大抗战精神的重要讲话”解读报告；
 
-**粗体文本** 和 *斜体文本*
+#### 山北省委组织部部长XXX同志作“新时代党员干部担当与作风建设”专题报告；
 
-- 列表项 1
-- 列表项 2
-- 列表项 3
+### 组织参训人员交流学习体会；
 
-1. 有序列表 1
-2. 有序列表 2
-3. 有序列表 3
+### 由省委办公厅主任XXX同志主持结业式。
 
----
+## 参加人员
 
-**字数统计**: ${docStore.getWordCount} 字
-**字符数**: ${docStore.getCharCount} 字符
+各单位参加学习的干部 1 至 2 人，各代表需准备时长 3 分钟以内的参会发言。
+
+## 培训纪律与要求
+
+各单位应高度重视，认真组织，确保参训质量。培训期间实行签到制度，考勤结果将纳入干部学习档案。参训人员须严格遵守培训作息制度和课堂纪律，不得无故迟到、早退或缺席。
+
+## 相关事项
+
+省委各部门参培人员于 10月8日 下午 5:00 在省政府门口统一乘车，各地（市）政府参培人员自行前往会议地点。
+
+会议统一安排食宿，所需费用由各单位报销。
+
+为便于安排食宿，各单位应将参培人员信息于 9月29日前 报省委办公厅（见参培人员信息会议回执）。
+
+联系人：XXX
+
+联系电话：18888888888
+
+::: indent:0em
+附件：参培人员信息会议回执
+:::
+
+::: indent:0em
+山北省委政府办公厅
+2025年9月26日
+:::
 `)
 
-// 文件输入引用
 const fileInput = ref<HTMLInputElement | null>(null)
-
-// 当前标准索引
 const currentRuleIndex = ref(0)
 
-// 同步编辑器内容到 store
 const updateContent = () => {
   docStore.setContent(editorContent.value)
 }
 
-// 导出 Markdown
 const handleExportMarkdown = () => {
   exportMarkdown(docStore.content, 'document.md')
 }
 
-// 导出 HTML
 const handleExportHtml = () => {
   exportHtml(docStore.html, 'document.html')
 }
 
-// 导入文件
+const handleExportPdf = () => {
+  exportPdf()
+}
+
 const handleImportFile = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
@@ -94,7 +104,6 @@ const handleImportFile = async (event: Event) => {
   }
 }
 
-// 切换标准
 const switchRule = () => {
   const rules = ruleStore.availableRules
   if (rules.length > 0) {
@@ -106,9 +115,21 @@ const switchRule = () => {
   }
 }
 
-// 当前标准名称
 const currentRuleName = computed(() => {
   return ruleStore.currentRule?.name || '未加载'
+})
+
+const parserSummary = computed(() => {
+  const parser = ruleStore.currentRule?.parser
+  if (!parser) {
+    return '未加载解析策略'
+  }
+
+  const disabled = parser.disabledSyntax.length > 0
+    ? parser.disabledSyntax.join('、')
+    : '无'
+
+  return `标题编号: ${parser.headingNumbering ? '开启' : '关闭'} ｜ 禁用语法: ${disabled}`
 })
 
 watch(
@@ -121,302 +142,90 @@ watch(
   { immediate: true }
 )
 
-// 初始化
 onMounted(() => {
-  // 初始化标准
   ruleStore.initializeRule()
-  
-  // 设置初始内容
+
+  if (ruleStore.currentRule) {
+    const index = ruleStore.availableRules.findIndex(
+      (item) => item.name === ruleStore.currentRule?.name
+    )
+    currentRuleIndex.value = index >= 0 ? index : 0
+  }
+
   updateContent()
 })
 </script>
 
 <template>
-  <div class="app-container">
-    <!-- 头部 -->
-    <header class="app-header">
-      <h1>📄 gov-draft 公文排版系统</h1>
-      <p class="subtitle">基于 GB/T 9704-2012 标准</p>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar__title-group">
+        <h1 class="topbar__title">gov-draft 公文排版系统</h1>
+        <p class="topbar__subtitle">标准驱动 · 解析可配置 · 预览导出同源</p>
+      </div>
+      <div class="topbar__meta">
+        <span class="meta-pill">字数 {{ docStore.getWordCount }}</span>
+        <span class="meta-pill">字符 {{ docStore.getCharCount }}</span>
+      </div>
     </header>
 
-    <!-- 工具栏 -->
-    <div class="toolbar">
-      <div class="toolbar-group">
-        <button @click="() => fileInput?.click()" class="btn btn-primary">
-          📁 导入 Markdown
+    <section class="toolbar">
+      <div class="toolbar__actions">
+        <button class="btn btn--primary" @click="() => fileInput?.click()">
+          导入 Markdown
         </button>
         <input
           ref="fileInput"
           type="file"
           accept=".md"
-          style="display: none"
           @change="handleImportFile"
         />
-        <button @click="handleExportMarkdown" class="btn btn-secondary">
-          💾 导出 Markdown
+        <button class="btn btn--secondary" @click="handleExportMarkdown">
+          导出 Markdown
         </button>
-        <button @click="handleExportHtml" class="btn btn-secondary">
-          🌐 导出 HTML
+        <button class="btn btn--secondary" @click="handleExportHtml">
+          导出 HTML
         </button>
-      </div>
-      <div class="toolbar-group">
-        <button @click="switchRule" class="btn btn-rule">
-          🎨 切换标准: {{ currentRuleName }}
+        <button class="btn btn--secondary" @click="handleExportPdf">
+          导出 PDF
         </button>
       </div>
-    </div>
+      <div class="toolbar__rule">
+        <button class="btn btn--rule" @click="switchRule">
+          切换标准：{{ currentRuleName }}
+        </button>
+        <p class="toolbar__hint">{{ parserSummary }}</p>
+      </div>
+    </section>
 
-    <!-- 主内容区 -->
-    <div class="main-content">
-      <!-- 编辑器 -->
-      <div class="editor-panel">
-        <div class="panel-header">
-          <h2>✏️ Markdown 编辑器</h2>
-          <div class="stats">
-            <span>字数: {{ docStore.getWordCount }}</span>
-            <span>字符: {{ docStore.getCharCount }}</span>
-          </div>
+    <main class="workspace">
+      <section class="panel editor-panel">
+        <div class="panel__header">
+          <h2>Markdown 编辑区</h2>
+          <span class="panel__tag">实时同步</span>
         </div>
         <textarea
+          class="editor-textarea"
           v-model="editorContent"
           @input="updateContent"
-          class="editor-textarea"
-          placeholder="在此输入 Markdown 内容..."
-        ></textarea>
-      </div>
+          placeholder="请输入公文 Markdown 内容"
+        />
+      </section>
 
-      <!-- 预览 -->
-      <div class="preview-panel">
-        <div class="panel-header">
-          <h2>👁️ 实时预览</h2>
+      <section class="panel preview-panel">
+        <div class="panel__header">
+          <h2>纸张预览</h2>
+          <span class="panel__tag">A4 视图</span>
         </div>
-        <div class="preview-content" v-html="docStore.html"></div>
-      </div>
-    </div>
+        <div class="paper-stage">
+          <A4Paper :html="docStore.html" />
+        </div>
+      </section>
+    </main>
 
-    <!-- 功能说明 -->
-    <footer class="app-footer">
-      <div class="feature-list">
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>Markdown 解析</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>标准系统</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>状态管理</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>文件操作</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>动态样式注入</span>
-        </div>
-        <div class="feature-item">
-          <span class="feature-icon">✅</span>
-          <span>属性测试覆盖</span>
-        </div>
-      </div>
+    <footer class="statusbar">
+      <span>当前标准：{{ currentRuleName }}</span>
+      <span>解析策略：{{ parserSummary }}</span>
     </footer>
   </div>
 </template>
-
-<style scoped>
-.app-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
-}
-
-.app-header {
-  text-align: center;
-  color: white;
-  margin-bottom: 20px;
-}
-
-.app-header h1 {
-  font-size: 2.5rem;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.subtitle {
-  font-size: 1.1rem;
-  opacity: 0.9;
-  margin-top: 8px;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  padding: 15px 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.toolbar-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #5568d3;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-  background: #48bb78;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #38a169;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(72, 187, 120, 0.4);
-}
-
-.btn-rule {
-  background: #ed8936;
-  color: white;
-}
-
-.btn-rule:hover {
-  background: #dd6b20;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(237, 137, 54, 0.4);
-}
-
-.main-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  flex: 1;
-  margin-bottom: 20px;
-}
-
-.editor-panel,
-.preview-panel {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.panel-header {
-  padding: 15px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.panel-header h2 {
-  margin: 0;
-  font-size: 1.3rem;
-}
-
-.stats {
-  display: flex;
-  gap: 15px;
-  font-size: 0.9rem;
-}
-
-.editor-textarea {
-  flex: 1;
-  padding: 20px;
-  border: none;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  resize: none;
-  outline: none;
-}
-
-.preview-content {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  line-height: 1.8;
-  font-family: '仿宋_GB2312', 'FangSong', 'STFangsong', serif;
-}
-
-.app-footer {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.feature-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background: #f7fafc;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.feature-item:hover {
-  background: #edf2f7;
-  transform: translateX(5px);
-}
-
-.feature-icon {
-  font-size: 1.5rem;
-}
-
-@media (max-width: 1024px) {
-  .main-content {
-    grid-template-columns: 1fr;
-  }
-  
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .toolbar-group {
-    justify-content: center;
-  }
-}
-</style>

@@ -11,6 +11,9 @@ describe('RuleEngine', () => {
     expect(compiled.rules.length).toBeGreaterThan(0)
     expect(compiled.cssText).toContain(':root')
     expect(compiled.cssText).toContain('--font-body-family')
+    expect(compiled.cssText).toContain('--font-body-indent')
+    expect(compiled.cssText).toContain('--font-heading-h2-indent')
+    expect(compiled.cssText).toContain('--spacing-h2-before')
     expect(compiled.cssText).toContain('@page')
   })
 

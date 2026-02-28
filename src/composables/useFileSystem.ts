@@ -7,6 +7,14 @@
 import { useDocumentStore } from '../stores/doc'
 import { useRuleStore } from '../stores/rule'
 
+type PageSizeType = 'A4' | 'A3' | 'Letter'
+
+const PAGE_SIZE_IN_MM: Record<PageSizeType, [number, number]> = {
+  A4: [210, 297],
+  A3: [297, 420],
+  Letter: [216, 279]
+}
+
 /**
  * useFileSystem 组合式函数
  * 提供文件操作相关功能
@@ -87,13 +95,64 @@ export function useFileSystem() {
   }
 
   /**
-   * 导出 PDF（通过打印功能）
+   * 导出 PDF（自建导出流程）
    * @returns Promise，打印完成后 resolve
    */
   const exportPdf = async (): Promise<void> => {
     try {
-      // 触发浏览器打印对话框
-      window.print()
+      const pages = Array.from(document.querySelectorAll<HTMLElement>('.paper-page'))
+      if (pages.length === 0) {
+        throw new Error('未找到可导出的分页内容，请先确认预览区域已渲染。')
+      }
+
+      await waitForFontsReady()
+
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ])
+
+      const pageConfig = ruleStore.currentRule?.page
+      const size = pageConfig?.size ?? 'A4'
+      const orientation = pageConfig?.orientation ?? 'portrait'
+      const [baseWidth, baseHeight] = PAGE_SIZE_IN_MM[size]
+      const width = orientation === 'portrait' ? baseWidth : baseHeight
+      const height = orientation === 'portrait' ? baseHeight : baseWidth
+
+      const pdf = new jsPDF({
+        unit: 'mm',
+        orientation,
+        format: [width, height],
+        compress: true
+      })
+
+      for (const [index, page] of pages.entries()) {
+        const { host, captureTarget, dispose } = createCaptureHost(page)
+
+        try {
+          const canvas = await html2canvas(captureTarget, {
+            scale: window.devicePixelRatio > 1 ? 2 : 1.5,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            logging: false
+          })
+
+          const imageData = canvas.toDataURL('image/jpeg', 0.96)
+
+          if (index > 0) {
+            pdf.addPage([width, height], orientation)
+          }
+
+          pdf.addImage(imageData, 'JPEG', 0, 0, width, height)
+        } finally {
+          dispose()
+          if (host.parentNode) {
+            host.parentNode.removeChild(host)
+          }
+        }
+      }
+
+      pdf.save(buildPdfFileName(docStore.metadata.title))
     } catch (error) {
       console.error('PDF 导出失败:', error)
       throw new Error(`PDF 导出失败: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -205,6 +264,52 @@ export function useFileSystem() {
     // 清理
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+  }
+
+  const waitForFontsReady = async (): Promise<void> => {
+    const fontSet = document.fonts
+    if (fontSet && typeof fontSet.ready !== 'undefined') {
+      await fontSet.ready
+    }
+  }
+
+  const createCaptureHost = (page: HTMLElement): {
+    host: HTMLElement
+    captureTarget: HTMLElement
+    dispose: () => void
+  } => {
+    const host = document.createElement('div')
+    host.style.position = 'fixed'
+    host.style.left = '-99999px'
+    host.style.top = '0'
+    host.style.pointerEvents = 'none'
+    host.style.opacity = '0'
+
+    const captureTarget = page.cloneNode(true) as HTMLElement
+    captureTarget.style.margin = '0'
+    captureTarget.style.boxShadow = 'none'
+    captureTarget.style.borderRadius = '0'
+    captureTarget.style.overflow = 'hidden'
+
+    host.appendChild(captureTarget)
+    document.body.appendChild(host)
+
+    return {
+      host,
+      captureTarget,
+      dispose: () => {
+        if (host.parentNode) {
+          host.parentNode.removeChild(host)
+        }
+      }
+    }
+  }
+
+  const buildPdfFileName = (title: string): string => {
+    const normalized = (title || 'document').trim()
+    const safe = normalized.replace(/[\\/:*?"<>|]/g, '_')
+    const finalName = safe.length > 0 ? safe : 'document'
+    return `${finalName}.pdf`
   }
 
   /**

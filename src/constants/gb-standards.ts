@@ -5,7 +5,7 @@
  * 参考标准：GB/T 9704-2012《党政机关公文格式》
  */
 
-import type { ColorConfig, FontConfig, PageConfig, SpacingConfig } from '../types/rule';
+import type { ColorConfig, ContentConfig, PageConfig } from '../types/rule';
 
 /**
  * GB/T 9704-2012 标准页面配置
@@ -44,47 +44,105 @@ export const GB_PAGE_CONFIG: PageConfig = {
  * - 小标宋：方正小标宋_GBK 或 方正小标宋简体
  * - 仿宋：仿宋_GB2312
  */
-export const GB_FONT_CONFIG: FontConfig = {
+export const GB_CONTENT_CONFIG: ContentConfig = {
   body: {
-    family: '仿宋_GB2312, FangSong, STFangsong, serif',  // 正文使用仿宋
-    size: '16pt',           // 三号字体（16pt）
-    weight: 400,
-    bold: false,
-    align: 'justify'
-  },
-  heading: {
-    h1: {
-      family: '方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif',
-      size: '22pt',
-      weight: 700,
-      bold: true,
-      align: 'center',
-      numberingStyle: 'none'
+    fonts: {
+      family: '仿宋_GB2312, FangSong, STFangsong, serif'
     },
-    h2: {
-      family: '黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif',
-      size: '16pt',
-      weight: 700,
-      bold: true,
-      align: 'left',
-      numberingStyle: 'chinese-comma'
-    },
-    h3: {
-      family: '楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif',
-      size: '16pt',
-      weight: 700,
-      bold: true,
-      align: 'left',
-      numberingStyle: 'chinese-paren'
-    },
-    h4: {
-      family: '仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif',
+    style: {
       size: '16pt',
       weight: 400,
-      bold: false,
-      align: 'left',
-      numberingStyle: 'arabic-dot'
+      color: '#000000'
+    },
+    paragraph: {
+      align: 'justify',
+      indent: '2em',
+      spacing: {
+        lineHeight: '28.95pt',
+        before: '0',
+        after: '0'
+      }
     }
+  },
+  h1: {
+    fonts: {
+      family: '方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif'
+    },
+    style: {
+      size: '22pt',
+      weight: 700,
+      color: '#000000'
+    },
+    paragraph: {
+      align: 'center',
+      indent: '0',
+      spacing: {
+        lineHeight: '28.95pt',
+        before: '1lines',
+        after: '0.5lines'
+      }
+    },
+    numberingStyle: ''
+  },
+  h2: {
+    fonts: {
+      family: '黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif'
+    },
+    style: {
+      size: '16pt',
+      weight: 700,
+      color: '#000000'
+    },
+    paragraph: {
+      align: 'left',
+      indent: '2em',
+      spacing: {
+        lineHeight: '28.95pt',
+        before: '1lines',
+        after: '0.5lines'
+      }
+    },
+    numberingStyle: '{zhHansIndex}、'
+  },
+  h3: {
+    fonts: {
+      family: '楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif'
+    },
+    style: {
+      size: '16pt',
+      weight: 700,
+      color: '#000000'
+    },
+    paragraph: {
+      align: 'left',
+      indent: '2em',
+      spacing: {
+        lineHeight: '28.95pt',
+        before: '1lines',
+        after: '0.5lines'
+      }
+    },
+    numberingStyle: '（{zhHansIndex}）'
+  },
+  h4: {
+    fonts: {
+      family: '仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif'
+    },
+    style: {
+      size: '16pt',
+      weight: 400,
+      color: '#000000'
+    },
+    paragraph: {
+      align: 'left',
+      indent: '2em',
+      spacing: {
+        lineHeight: '28.95pt',
+        before: '1lines',
+        after: '0.5lines'
+      }
+    },
+    numberingStyle: '{romanIndex}．'
   }
 };
 
@@ -106,13 +164,6 @@ export const GB_COLOR_CONFIG: ColorConfig = {
  * 3.2 行的定义：
  * - 一行指一个汉字的高度加 3 号汉字高度的 7/8 的距离
  */
-export const GB_SPACING_CONFIG: SpacingConfig = {
-  lineHeight: '28.95pt',   // 固定行距（一个汉字高度 + 7/8 汉字高度）
-  paragraphSpacing: '0',   // 段落间距
-  indent: '2em',           // 首行缩进 2 字符（7.3.3）
-  headingParagraphBreak: false
-};
-
 /**
  * GB/T 9704-2012 版心尺寸
  * 
@@ -131,8 +182,7 @@ export const GB_VERSION_HEART = {
  */
 export const GB_STANDARDS = {
   page: GB_PAGE_CONFIG,
-  fonts: GB_FONT_CONFIG,
-  spacing: GB_SPACING_CONFIG,
+  content: GB_CONTENT_CONFIG,
   colors: GB_COLOR_CONFIG,
   versionHeart: GB_VERSION_HEART
 } as const;

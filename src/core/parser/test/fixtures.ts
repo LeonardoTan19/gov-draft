@@ -13,6 +13,6 @@ const value = 1
 ---`
 
 export const headingStyles: Partial<Record<HeadingLevel, string | undefined>> = {
-  h2: '{number}、',
-  h3: '（{number}）'
+  h2: '{zhHansIndex}、',
+  h3: '（{zhHantIndex}）'
 }

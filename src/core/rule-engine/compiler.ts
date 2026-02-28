@@ -3,6 +3,7 @@ import { scopeSelectors } from './css-scope';
 
 const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
 const CSS_PROPERTY_UNSAFE_CHARS = /[{};:\n\r]/g;
+const PARAGRAPH_LINES_PATTERN = /^(-?\d+(\.\d+)?)lines$/;
 
 export function compileRule(ruleConfig: RuleConfig): CompiledRule {
   const tokens = generateRuleTokens(ruleConfig);
@@ -51,34 +52,65 @@ function atRule(name: string, options: Omit<AtRule, 'type' | 'name'> = {}): AtRu
   };
 }
 
+function normalizeParagraphSpacing(value: string): string {
+  const normalized = sanitizeCssValue(value);
+  const matched = normalized.match(PARAGRAPH_LINES_PATTERN);
+  if (!matched) {
+    return normalized;
+  }
+
+  const lines = matched[1] ?? '0';
+  return `${lines}em`;
+}
+
 function generateRuleTokens(config: RuleConfig): Record<string, string> {
   return {
-    '--font-body-family': sanitizeCssValue(config.fonts.body.family),
-    '--font-body-size': sanitizeCssValue(config.fonts.body.size),
-    '--font-body-weight': sanitizeCssValue(config.fonts.body.bold ? 700 : config.fonts.body.weight),
-    '--font-body-align': sanitizeCssValue(config.fonts.body.align),
+    '--font-body-family': sanitizeCssValue(config.content.body.fonts.family),
+    '--font-body-size': sanitizeCssValue(config.content.body.style.size),
+    '--font-body-weight': sanitizeCssValue(config.content.body.style.weight),
+    '--font-body-align': sanitizeCssValue(config.content.body.paragraph.align),
+    '--font-body-indent': sanitizeCssValue(config.content.body.paragraph.indent),
+    '--font-body-color': sanitizeCssValue(config.content.body.style.color),
+    '--spacing-body-line-height': sanitizeCssValue(config.content.body.paragraph.spacing.lineHeight),
+    '--spacing-body-before': normalizeParagraphSpacing(config.content.body.paragraph.spacing.before),
+    '--spacing-body-after': normalizeParagraphSpacing(config.content.body.paragraph.spacing.after),
 
-    '--font-heading-h1-family': sanitizeCssValue(config.fonts.heading.h1.family),
-    '--font-heading-h2-family': sanitizeCssValue(config.fonts.heading.h2.family),
-    '--font-heading-h3-family': sanitizeCssValue(config.fonts.heading.h3.family),
-    '--font-heading-h4-family': sanitizeCssValue(config.fonts.heading.h4.family),
-    '--font-heading-h1-size': sanitizeCssValue(config.fonts.heading.h1.size),
-    '--font-heading-h2-size': sanitizeCssValue(config.fonts.heading.h2.size),
-    '--font-heading-h3-size': sanitizeCssValue(config.fonts.heading.h3.size),
-    '--font-heading-h4-size': sanitizeCssValue(config.fonts.heading.h4.size),
-    '--font-heading-h1-weight': sanitizeCssValue(config.fonts.heading.h1.bold ? 700 : config.fonts.heading.h1.weight),
-    '--font-heading-h2-weight': sanitizeCssValue(config.fonts.heading.h2.bold ? 700 : config.fonts.heading.h2.weight),
-    '--font-heading-h3-weight': sanitizeCssValue(config.fonts.heading.h3.bold ? 700 : config.fonts.heading.h3.weight),
-    '--font-heading-h4-weight': sanitizeCssValue(config.fonts.heading.h4.bold ? 700 : config.fonts.heading.h4.weight),
-    '--font-heading-h1-align': sanitizeCssValue(config.fonts.heading.h1.align),
-    '--font-heading-h2-align': sanitizeCssValue(config.fonts.heading.h2.align),
-    '--font-heading-h3-align': sanitizeCssValue(config.fonts.heading.h3.align),
-    '--font-heading-h4-align': sanitizeCssValue(config.fonts.heading.h4.align),
-
-    '--spacing-line-height': sanitizeCssValue(config.spacing.lineHeight),
-    '--spacing-paragraph': sanitizeCssValue(config.spacing.paragraphSpacing),
-    '--spacing-indent': sanitizeCssValue(config.spacing.indent),
-    '--spacing-heading-paragraph-gap': sanitizeCssValue(config.spacing.headingParagraphBreak ? config.spacing.paragraphSpacing : '0'),
+    '--font-heading-h1-family': sanitizeCssValue(config.content.h1.fonts.family),
+    '--font-heading-h2-family': sanitizeCssValue(config.content.h2.fonts.family),
+    '--font-heading-h3-family': sanitizeCssValue(config.content.h3.fonts.family),
+    '--font-heading-h4-family': sanitizeCssValue(config.content.h4.fonts.family),
+    '--font-heading-h1-size': sanitizeCssValue(config.content.h1.style.size),
+    '--font-heading-h2-size': sanitizeCssValue(config.content.h2.style.size),
+    '--font-heading-h3-size': sanitizeCssValue(config.content.h3.style.size),
+    '--font-heading-h4-size': sanitizeCssValue(config.content.h4.style.size),
+    '--font-heading-h1-weight': sanitizeCssValue(config.content.h1.style.weight),
+    '--font-heading-h2-weight': sanitizeCssValue(config.content.h2.style.weight),
+    '--font-heading-h3-weight': sanitizeCssValue(config.content.h3.style.weight),
+    '--font-heading-h4-weight': sanitizeCssValue(config.content.h4.style.weight),
+    '--font-heading-h1-align': sanitizeCssValue(config.content.h1.paragraph.align),
+    '--font-heading-h2-align': sanitizeCssValue(config.content.h2.paragraph.align),
+    '--font-heading-h3-align': sanitizeCssValue(config.content.h3.paragraph.align),
+    '--font-heading-h4-align': sanitizeCssValue(config.content.h4.paragraph.align),
+    '--font-heading-h1-indent': sanitizeCssValue(config.content.h1.paragraph.indent),
+    '--font-heading-h2-indent': sanitizeCssValue(config.content.h2.paragraph.indent),
+    '--font-heading-h3-indent': sanitizeCssValue(config.content.h3.paragraph.indent),
+    '--font-heading-h4-indent': sanitizeCssValue(config.content.h4.paragraph.indent),
+    '--font-heading-h1-color': sanitizeCssValue(config.content.h1.style.color),
+    '--font-heading-h2-color': sanitizeCssValue(config.content.h2.style.color),
+    '--font-heading-h3-color': sanitizeCssValue(config.content.h3.style.color),
+    '--font-heading-h4-color': sanitizeCssValue(config.content.h4.style.color),
+    '--spacing-h1-line-height': sanitizeCssValue(config.content.h1.paragraph.spacing.lineHeight),
+    '--spacing-h2-line-height': sanitizeCssValue(config.content.h2.paragraph.spacing.lineHeight),
+    '--spacing-h3-line-height': sanitizeCssValue(config.content.h3.paragraph.spacing.lineHeight),
+    '--spacing-h4-line-height': sanitizeCssValue(config.content.h4.paragraph.spacing.lineHeight),
+    '--spacing-h1-before': normalizeParagraphSpacing(config.content.h1.paragraph.spacing.before),
+    '--spacing-h2-before': normalizeParagraphSpacing(config.content.h2.paragraph.spacing.before),
+    '--spacing-h3-before': normalizeParagraphSpacing(config.content.h3.paragraph.spacing.before),
+    '--spacing-h4-before': normalizeParagraphSpacing(config.content.h4.paragraph.spacing.before),
+    '--spacing-h1-after': normalizeParagraphSpacing(config.content.h1.paragraph.spacing.after),
+    '--spacing-h2-after': normalizeParagraphSpacing(config.content.h2.paragraph.spacing.after),
+    '--spacing-h3-after': normalizeParagraphSpacing(config.content.h3.paragraph.spacing.after),
+    '--spacing-h4-after': normalizeParagraphSpacing(config.content.h4.paragraph.spacing.after),
 
     '--color-text': sanitizeCssValue(config.colors.text),
     '--color-background': sanitizeCssValue(config.colors.background),
@@ -108,23 +140,19 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('font-family', 'var(--font-body-family)'),
       declaration('font-size', 'var(--font-body-size)'),
       declaration('font-weight', 'var(--font-body-weight)'),
-      declaration('line-height', 'var(--spacing-line-height)'),
-      declaration('color', 'var(--color-text)'),
+      declaration('line-height', 'var(--spacing-body-line-height)'),
+      declaration('color', 'var(--font-body-color)'),
       declaration('background-color', 'var(--color-background)')
     ])
   );
 
   rules.push(
     styleRule(scopeSelectors(['p'], textScopeRoots), [
-      declaration('margin', 'var(--spacing-paragraph) 0'),
-      declaration('text-indent', 'var(--spacing-indent)'),
-      declaration('text-align', 'var(--font-body-align)')
-    ])
-  );
-
-  rules.push(
-    styleRule(scopeSelectors(['h1 + p', 'h2 + p', 'h3 + p', 'h4 + p'], textScopeRoots), [
-      declaration('margin-top', 'var(--spacing-heading-paragraph-gap)')
+      declaration('margin-top', 'var(--spacing-body-before)'),
+      declaration('margin-bottom', 'var(--spacing-body-after)'),
+      declaration('text-indent', 'var(--font-body-indent)'),
+      declaration('text-align', 'var(--font-body-align)'),
+      declaration('line-height', 'var(--spacing-body-line-height)')
     ])
   );
 
@@ -134,7 +162,11 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('font-size', 'var(--font-heading-h1-size)'),
       declaration('font-weight', 'var(--font-heading-h1-weight)'),
       declaration('text-align', 'var(--font-heading-h1-align)'),
-      declaration('margin', '1em 0 0.5em 0')
+      declaration('text-indent', 'var(--font-heading-h1-indent)'),
+      declaration('line-height', 'var(--spacing-h1-line-height)'),
+      declaration('color', 'var(--font-heading-h1-color)'),
+      declaration('margin-top', 'var(--spacing-h1-before)'),
+      declaration('margin-bottom', 'var(--spacing-h1-after)')
     ])
   );
   rules.push(
@@ -143,7 +175,11 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('font-size', 'var(--font-heading-h2-size)'),
       declaration('font-weight', 'var(--font-heading-h2-weight)'),
       declaration('text-align', 'var(--font-heading-h2-align)'),
-      declaration('margin', '1em 0 0.5em 0')
+      declaration('text-indent', 'var(--font-heading-h2-indent)'),
+      declaration('line-height', 'var(--spacing-h2-line-height)'),
+      declaration('color', 'var(--font-heading-h2-color)'),
+      declaration('margin-top', 'var(--spacing-h2-before)'),
+      declaration('margin-bottom', 'var(--spacing-h2-after)')
     ])
   );
   rules.push(
@@ -152,7 +188,11 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('font-size', 'var(--font-heading-h3-size)'),
       declaration('font-weight', 'var(--font-heading-h3-weight)'),
       declaration('text-align', 'var(--font-heading-h3-align)'),
-      declaration('margin', '1em 0 0.5em 0')
+      declaration('text-indent', 'var(--font-heading-h3-indent)'),
+      declaration('line-height', 'var(--spacing-h3-line-height)'),
+      declaration('color', 'var(--font-heading-h3-color)'),
+      declaration('margin-top', 'var(--spacing-h3-before)'),
+      declaration('margin-bottom', 'var(--spacing-h3-after)')
     ])
   );
   rules.push(
@@ -161,7 +201,11 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('font-size', 'var(--font-heading-h4-size)'),
       declaration('font-weight', 'var(--font-heading-h4-weight)'),
       declaration('text-align', 'var(--font-heading-h4-align)'),
-      declaration('margin', '1em 0 0.5em 0')
+      declaration('text-indent', 'var(--font-heading-h4-indent)'),
+      declaration('line-height', 'var(--spacing-h4-line-height)'),
+      declaration('color', 'var(--font-heading-h4-color)'),
+      declaration('margin-top', 'var(--spacing-h4-before)'),
+      declaration('margin-bottom', 'var(--spacing-h4-after)')
     ])
   );
 

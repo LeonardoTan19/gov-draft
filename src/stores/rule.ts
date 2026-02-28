@@ -63,7 +63,12 @@ export const useRuleStore = defineStore('rule', () => {
       const savedRule = localStorage.getItem('gov-draft-rule')
       if (savedRule) {
         const rule = JSON.parse(savedRule) as RuleConfig
-        loadRule(rule)
+        const builtinRule = availableRules.value.find((item) => item.name === rule.name)
+        if (builtinRule && !isSameRule(rule, builtinRule)) {
+          loadRule(builtinRule)
+        } else {
+          loadRule(rule)
+        }
       } else if (availableRules.value.length > 0) {
         const defaultRule = availableRules.value[0]
         if (defaultRule) {
@@ -146,6 +151,10 @@ export const useRuleStore = defineStore('rule', () => {
 
       return acc
     }, {})
+  }
+
+  function isSameRule(left: RuleConfig, right: RuleConfig): boolean {
+    return JSON.stringify(left) === JSON.stringify(right)
   }
 
   return {
