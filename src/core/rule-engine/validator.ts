@@ -32,7 +32,6 @@ export function validateRule(ruleConfig: unknown): ValidationResult {
   validateString(rule.version, 'version', issues);
 
   validateContent(rule.content, issues);
-  validateColors(rule.colors, issues);
   validatePage(rule.page, issues);
   validateParser(rule.parser, issues);
 
@@ -70,6 +69,10 @@ function validateString(value: unknown, path: string, issues: ValidationIssue[])
 }
 
 function validateCssLength(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value === 'number' && value === 0) {
+    return;
+  }
+
   if (typeof value !== 'string' || !CSS_LENGTH_PATTERN.test(value.trim())) {
     pushError(issues, path, '必须是合法长度值（例如 16pt、37mm、2em、0）');
   }
@@ -82,6 +85,14 @@ function validateCssLineHeight(value: unknown, path: string, issues: ValidationI
 }
 
 function validateCssParagraphSpacing(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (value === '') {
+    return;
+  }
+
+  if (typeof value === 'number' && value === 0) {
+    return;
+  }
+
   if (typeof value !== 'string' || !CSS_PARAGRAPH_SPACING_PATTERN.test(value.trim())) {
     pushError(issues, path, '必须是合法段间距（支持长度值、0、或 Nlines）');
   }
@@ -135,7 +146,16 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
   } else {
     validateCssLength(contentItem.style.size, `${path}.style.size`, issues);
     validateFontWeight(contentItem.style.weight, `${path}.style.weight`, issues);
-    validateCssColor(contentItem.style.color, `${path}.style.color`, issues);
+    if (!isObject(contentItem.style.colors)) {
+      pushError(issues, `${path}.style.colors`, '字段缺失或类型错误');
+    } else {
+      validateCssColor(contentItem.style.colors.text, `${path}.style.colors.text`, issues);
+      validateCssColor(contentItem.style.colors.background, `${path}.style.colors.background`, issues);
+    }
+
+    if (contentItem.style.index !== undefined && contentItem.style.index !== null && typeof contentItem.style.index !== 'string') {
+      pushError(issues, `${path}.style.index`, '必须是字符串');
+    }
   }
 
   if (!isObject(contentItem.paragraph)) {
@@ -153,9 +173,6 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
     }
   }
 
-  if (contentItem.numberingStyle !== undefined && typeof contentItem.numberingStyle !== 'string') {
-    pushError(issues, `${path}.numberingStyle`, '必须是字符串');
-  }
 }
 
 function validateContent(content: unknown, issues: ValidationIssue[]): void {
@@ -169,17 +186,6 @@ function validateContent(content: unknown, issues: ValidationIssue[]): void {
   validateContentItem(content.h2, 'content.h2', issues);
   validateContentItem(content.h3, 'content.h3', issues);
   validateContentItem(content.h4, 'content.h4', issues);
-}
-
-function validateColors(colors: unknown, issues: ValidationIssue[]): void {
-  if (!isObject(colors)) {
-    pushError(issues, 'colors', '字段缺失或类型错误');
-    return;
-  }
-
-  validateCssColor(colors.text, 'colors.text', issues);
-  validateCssColor(colors.background, 'colors.background', issues);
-  validateCssColor(colors.accent, 'colors.accent', issues);
 }
 
 function validatePage(page: unknown, issues: ValidationIssue[]): void {

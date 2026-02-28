@@ -15,10 +15,6 @@ content:
   h2: ContentItem
   h3: ContentItem
   h4: ContentItem
-colors:
-  text: CssColor
-  background: CssColor
-  accent: CssColor
 page:
   size: A4 | A3 | Letter
   orientation: portrait | landscape
@@ -48,7 +44,10 @@ fonts:
 style:
   size: CssLength
   weight: 100|200|...|900
-  color: CssColor
+  colors:
+    text: CssColor
+    background: CssColor
+  index: string                # 可选（标题级别）
 paragraph:
   align: left|center|right|justify
   indent: CssLength
@@ -56,7 +55,6 @@ paragraph:
     lineHeight: CssLineHeight
     before: CssParagraphSpacing
     after: CssParagraphSpacing
-numberingStyle: string           # 可选（标题级别）
 ```
 
 ## 3. CSS 变量命名规则（自动生成）
@@ -75,25 +73,9 @@ numberingStyle: string           # 可选（标题级别）
 - `content.h2.paragraph.spacing.before` -> `--content-h2-paragraph-spacing-before`
 - `page.margins.top` -> `--page-margins-top`
 
-## 4. localStyleAliases 规则
+## 4. 局部样式路径规则
 
-`localStyleAliases` 不再内置固定别名表，完全由 YAML 提供，且目标必须在 `content.*` 范围。
-
-```yaml
-parser:
-  localStyleAliases:
-    bodyParagraphIndent: content.body.paragraph.indent
-```
-
-Markdown 中可写：
-
-```markdown
-::: bodyParagraphIndent: 0em
-正文
-:::
-```
-
-也支持直接使用规范路径：
+局部样式仅支持 YAML 标准路径：
 
 ```markdown
 ::: content.body.paragraph.indent: 0em
@@ -101,11 +83,11 @@ Markdown 中可写：
 :::
 ```
 
-并支持“去掉 content 前缀”的语法糖（动态适配所有 content 路径）：
+同时支持“仅省略 content 前缀”的等价写法：
 
 ```markdown
-::: h2.style.size: 14pt
-标题
+::: body.paragraph.indent: 0em
+正文
 :::
 ```
 
@@ -116,6 +98,10 @@ Markdown 中可写：
 - 必须位于 `content.*` 路径下；
 - 路径段不能包含 `__proto__` / `prototype` / `constructor`；
 - 局部样式值支持任意安全 CSS 值（会过滤 `{ } ;` 和换行）。
+
+补充约定：
+- `style.index` 为空（`index:`）或缺省时，等价为 `0lines`（不添加编号前缀）；
+- 颜色值可写为 `#ff0000` 或 `'#ff0000'`，解析时会去掉外层引号。
 
 ## 6. 兼容策略
 

@@ -11,14 +11,16 @@ content:
     style:
       size: 16pt
       weight: 400
-      color: '#000000'
+      colors:
+        text: '#000000'
+        background: '#ffffff'
     paragraph:
       align: justify
       indent: 2em
       spacing:
         lineHeight: 28.95pt
-        before: '0'
-        after: '0'
+        before: 0lines
+        after: 0lines
   h1:
     fonts:
       latinFamily: Times New Roman, serif
@@ -28,15 +30,17 @@ content:
     style:
       size: 22pt
       weight: 400
-      color: '#000000'
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index:
     paragraph:
       align: center
       indent: 0em
       spacing:
         lineHeight: 28.95pt
         before: 2lines
-        after: '1lines'
-    numberingStyle: ''
+        after: 1lines
   h2:
     fonts:
       latinFamily: Times New Roman, serif
@@ -46,15 +50,17 @@ content:
     style:
       size: 16pt
       weight: 400
-      color: '#000000'
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index: '{zhHansIndex}、'
     paragraph:
       align: left
       indent: 2em
       spacing:
         lineHeight: 28.95pt
-        before: '0'
-        after: '0'
-    numberingStyle: '{zhHansIndex}、'
+        before: 0lines
+        after: 0lines
   h3:
     fonts:
       latinFamily: Times New Roman, serif
@@ -64,15 +70,17 @@ content:
     style:
       size: 16pt
       weight: 400
-      color: '#000000'
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index: '（{zhHansIndex}）'
     paragraph:
       align: left
       indent: 2em
       spacing:
         lineHeight: 28.95pt
-        before: '0'
-        after: '0'
-    numberingStyle: '（{zhHansIndex}）'
+        before: 0lines
+        after: 0lines
   h4:
     fonts:
       latinFamily: Times New Roman, serif
@@ -82,19 +90,17 @@ content:
     style:
       size: 16pt
       weight: 400
-      color: '#000000'
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index: '{romanIndex}．'
     paragraph:
       align: left
       indent: 2em
       spacing:
         lineHeight: 28.95pt
-        before: '0'
-        after: '0'
-    numberingStyle: '{romanIndex}．'
-colors:
-  text: '#000000'
-  background: '#ffffff'
-  accent: '#FF0000'
+        before: 0lines
+        after: 0lines
 page:
   size: A4
   orientation: portrait

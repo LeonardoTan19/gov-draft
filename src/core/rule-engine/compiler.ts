@@ -55,8 +55,11 @@ function atRule(name: string, options: Omit<AtRule, 'type' | 'name'> = {}): AtRu
   };
 }
 
-function normalizeParagraphSpacing(value: string): string {
+function normalizeParagraphSpacing(value: unknown): string {
   const normalized = sanitizeCssValue(value);
+  if (!normalized) {
+    return '0';
+  }
   const matched = normalized.match(PARAGRAPH_LINES_PATTERN);
   if (!matched) {
     return normalized;
@@ -70,7 +73,7 @@ function setToken(tokens: Record<string, string>, path: string, value: unknown):
   tokens[toCssCustomProperty(path)] = sanitizeCssValue(value);
 }
 
-function setParagraphSpacingToken(tokens: Record<string, string>, path: string, value: string): void {
+function setParagraphSpacingToken(tokens: Record<string, string>, path: string, value: unknown): void {
   tokens[toCssCustomProperty(path)] = normalizeParagraphSpacing(value);
 }
 
@@ -95,7 +98,8 @@ function generateRuleTokens(config: RuleConfig): Record<string, string> {
 
     setToken(tokens, `content.${level}.style.size`, item.style.size);
     setToken(tokens, `content.${level}.style.weight`, item.style.weight);
-    setToken(tokens, `content.${level}.style.color`, item.style.color);
+    setToken(tokens, `content.${level}.style.colors.text`, item.style.colors.text);
+    setToken(tokens, `content.${level}.style.colors.background`, item.style.colors.background);
 
     setToken(tokens, `content.${level}.paragraph.align`, item.paragraph.align);
     setToken(tokens, `content.${level}.paragraph.indent`, item.paragraph.indent);
@@ -104,9 +108,6 @@ function generateRuleTokens(config: RuleConfig): Record<string, string> {
     setParagraphSpacingToken(tokens, `content.${level}.paragraph.spacing.after`, item.paragraph.spacing.after);
   });
 
-  setToken(tokens, 'colors.text', config.colors.text);
-  setToken(tokens, 'colors.background', config.colors.background);
-  setToken(tokens, 'colors.accent', config.colors.accent);
   setToken(tokens, 'page.size', config.page.size);
   setToken(tokens, 'page.orientation', config.page.orientation);
   setToken(tokens, 'page.margins.top', config.page.margins.top);
@@ -134,8 +135,8 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('font-size', `var(${toCssCustomProperty('content.body.style.size')})`),
       declaration('font-weight', `var(${toCssCustomProperty('content.body.style.weight')})`),
       declaration('line-height', `var(${toCssCustomProperty('content.body.paragraph.spacing.lineHeight')})`),
-      declaration('color', `var(${toCssCustomProperty('content.body.style.color')})`),
-      declaration('background-color', `var(${toCssCustomProperty('colors.background')})`)
+      declaration('color', `var(${toCssCustomProperty('content.body.style.colors.text')})`),
+      declaration('background-color', `var(${toCssCustomProperty('content.body.style.colors.background')})`)
     ])
   );
 
@@ -158,6 +159,13 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
   );
 
   rules.push(
+    styleRule(scopeSelectors(['.local-style-container'], textScopeRoots), [
+      declaration('color', `var(${toCssCustomProperty('content.body.style.colors.text')})`),
+      declaration('background-color', `var(${toCssCustomProperty('content.body.style.colors.background')})`)
+    ])
+  );
+
+  rules.push(
     styleRule(scopeSelectors(['p'], textScopeRoots), [
       declaration('margin-top', `var(${toCssCustomProperty('content.body.paragraph.spacing.before')})`),
       declaration('margin-bottom', `var(${toCssCustomProperty('content.body.paragraph.spacing.after')})`),
@@ -175,7 +183,7 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('text-align', `var(${toCssCustomProperty('content.h1.paragraph.align')})`),
       declaration('text-indent', `var(${toCssCustomProperty('content.h1.paragraph.indent')})`),
       declaration('line-height', `var(${toCssCustomProperty('content.h1.paragraph.spacing.lineHeight')})`),
-      declaration('color', `var(${toCssCustomProperty('content.h1.style.color')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h1.style.colors.text')})`),
       declaration('margin-top', `var(${toCssCustomProperty('content.h1.paragraph.spacing.before')})`),
       declaration('margin-bottom', `var(${toCssCustomProperty('content.h1.paragraph.spacing.after')})`)
     ])
@@ -188,7 +196,7 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('text-align', `var(${toCssCustomProperty('content.h2.paragraph.align')})`),
       declaration('text-indent', `var(${toCssCustomProperty('content.h2.paragraph.indent')})`),
       declaration('line-height', `var(${toCssCustomProperty('content.h2.paragraph.spacing.lineHeight')})`),
-      declaration('color', `var(${toCssCustomProperty('content.h2.style.color')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h2.style.colors.text')})`),
       declaration('margin-top', `var(${toCssCustomProperty('content.h2.paragraph.spacing.before')})`),
       declaration('margin-bottom', `var(${toCssCustomProperty('content.h2.paragraph.spacing.after')})`)
     ])
@@ -201,7 +209,7 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('text-align', `var(${toCssCustomProperty('content.h3.paragraph.align')})`),
       declaration('text-indent', `var(${toCssCustomProperty('content.h3.paragraph.indent')})`),
       declaration('line-height', `var(${toCssCustomProperty('content.h3.paragraph.spacing.lineHeight')})`),
-      declaration('color', `var(${toCssCustomProperty('content.h3.style.color')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h3.style.colors.text')})`),
       declaration('margin-top', `var(${toCssCustomProperty('content.h3.paragraph.spacing.before')})`),
       declaration('margin-bottom', `var(${toCssCustomProperty('content.h3.paragraph.spacing.after')})`)
     ])
@@ -214,7 +222,7 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
       declaration('text-align', `var(${toCssCustomProperty('content.h4.paragraph.align')})`),
       declaration('text-indent', `var(${toCssCustomProperty('content.h4.paragraph.indent')})`),
       declaration('line-height', `var(${toCssCustomProperty('content.h4.paragraph.spacing.lineHeight')})`),
-      declaration('color', `var(${toCssCustomProperty('content.h4.style.color')})`),
+      declaration('color', `var(${toCssCustomProperty('content.h4.style.colors.text')})`),
       declaration('margin-top', `var(${toCssCustomProperty('content.h4.paragraph.spacing.before')})`),
       declaration('margin-bottom', `var(${toCssCustomProperty('content.h4.paragraph.spacing.after')})`)
     ])

@@ -28,10 +28,10 @@ export function useMarkdown() {
   const parse = (markdown: string): string => {
     const headingStyles = ruleStore.currentRule
       ? {
-          h1: ruleStore.currentRule.content.h1.numberingStyle,
-          h2: ruleStore.currentRule.content.h2.numberingStyle,
-          h3: ruleStore.currentRule.content.h3.numberingStyle,
-          h4: ruleStore.currentRule.content.h4.numberingStyle
+          h1: ruleStore.currentRule.content.h1.style.index ?? '0lines',
+          h2: ruleStore.currentRule.content.h2.style.index ?? '0lines',
+          h3: ruleStore.currentRule.content.h3.style.index ?? '0lines',
+          h4: ruleStore.currentRule.content.h4.style.index ?? '0lines'
         }
       : undefined
 

@@ -7,13 +7,12 @@ export type MarkdownOptions = ParserConfig;
 
 type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
 
-type LocalStyleAliasMap = Record<string, string>;
-
 const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
 const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
 const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
 const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
+const HEADING_INDEX_DISABLED_VALUE = '0lines';
 
 const defaultOptions: MarkdownOptions = {
   html: false,
@@ -77,7 +76,7 @@ export class MarkdownParser {
       typographer: options.typographer
     });
 
-    this.registerLocalStyleContainer(parser, options.localStyleAliases ?? {});
+    this.registerLocalStyleContainer(parser);
     this.registerTextFontScopes(parser);
 
     if (options.disabledSyntax.includes('codeBlock')) {
@@ -93,8 +92,8 @@ export class MarkdownParser {
     return parser;
   }
 
-  private registerLocalStyleContainer(parser: MarkdownIt, aliasMap: LocalStyleAliasMap): void {
-    parser.block.ruler.before('fence', 'local_style_container', (state, startLine, endLine, silent) => {
+  private registerLocalStyleContainer(parser: MarkdownIt): void {
+    const ruleHandler = (state: Parameters<Parameters<MarkdownIt['block']['ruler']['before']>[2]>[0], startLine: number, endLine: number, silent: boolean): boolean => {
       const startPos = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
       const maxPos = state.eMarks[startLine] ?? startPos;
       const firstLine = state.src.slice(startPos, maxPos).trim();
@@ -104,18 +103,27 @@ export class MarkdownParser {
       }
 
       const descriptor = firstLine.slice(3).trim();
-      const styleText = this.parseLocalStyleDescriptor(descriptor, aliasMap);
+      const styleText = this.parseMultiLocalStyleDescriptors(descriptor);
       if (!styleText) {
         return false;
       }
 
+      let nesting = 1;
       let nextLine = startLine + 1;
       while (nextLine < endLine) {
         const lineStart = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
         const lineEnd = state.eMarks[nextLine] ?? lineStart;
         const lineText = state.src.slice(lineStart, lineEnd).trim();
-        if (lineText === ':::') {
-          break;
+        if (lineText.startsWith(':::')) {
+          const innerDescriptor = lineText.slice(3).trim();
+          if (innerDescriptor) {
+            nesting += 1;
+          } else {
+            nesting -= 1;
+            if (nesting === 0) {
+              break;
+            }
+          }
         }
         nextLine += 1;
       }
@@ -141,10 +149,29 @@ export class MarkdownParser {
 
       state.line = nextLine + 1;
       return true;
-    });
+    };
+
+    parser.block.ruler.before('fence', 'local_style_container', ruleHandler, { alt: ['paragraph', 'reference', 'blockquote'] });
   }
 
-  private parseLocalStyleDescriptor(descriptor: string, aliasMap: LocalStyleAliasMap): string {
+  private parseMultiLocalStyleDescriptors(descriptor: string): string {
+    const segments = descriptor.split(/[;；]/).map((segment) => segment.trim()).filter(Boolean);
+    if (segments.length === 0) {
+      return '';
+    }
+
+    const declarations: string[] = [];
+    for (const segment of segments) {
+      const result = this.parseLocalStyleDescriptor(segment);
+      if (result) {
+        declarations.push(result);
+      }
+    }
+
+    return declarations.length > 0 ? declarations.join(' ') : '';
+  }
+
+  private parseLocalStyleDescriptor(descriptor: string): string {
     const separatorIndex = this.findDescriptorSeparatorIndex(descriptor);
     if (separatorIndex <= 0) {
       return '';
@@ -156,12 +183,12 @@ export class MarkdownParser {
       return '';
     }
 
-    const normalizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
+    const normalizedValue = this.normalizeLocalStyleValue(rawValue);
     if (!normalizedValue) {
       return '';
     }
 
-    const targetPath = this.resolveLocalStyleTargetPath(key, aliasMap);
+    const targetPath = this.resolveLocalStyleTargetPath(key);
     if (!targetPath) {
       return '';
     }
@@ -184,16 +211,24 @@ export class MarkdownParser {
     return Math.min(colonIndex, fullWidthColonIndex);
   }
 
-  private resolveLocalStyleTargetPath(key: string, aliasMap: LocalStyleAliasMap): string | null {
-    const normalizedKey = key.trim();
-    const aliasTarget = aliasMap[normalizedKey];
-    if (aliasTarget) {
-      const normalizedAliasTarget = aliasTarget.trim();
-      if (!this.isOverridablePath(normalizedAliasTarget)) {
-        return null;
-      }
-      return normalizedAliasTarget;
+  private normalizeLocalStyleValue(rawValue: string): string {
+    const sanitizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
+    if (!sanitizedValue) {
+      return '';
     }
+
+    const firstChar = sanitizedValue[0];
+    const lastChar = sanitizedValue[sanitizedValue.length - 1];
+    const isQuoted = (firstChar === '\'' && lastChar === '\'') || (firstChar === '"' && lastChar === '"');
+    if (!isQuoted) {
+      return sanitizedValue;
+    }
+
+    return sanitizedValue.slice(1, -1).trim();
+  }
+
+  private resolveLocalStyleTargetPath(key: string): string | null {
+    const normalizedKey = key.trim();
 
     if (this.isOverridablePath(normalizedKey)) {
       return normalizedKey;
@@ -359,7 +394,7 @@ export class MarkdownParser {
 
   private formatHeadingPrefix(currentIndex: number, style: string | undefined): string {
     const template = String(style ?? '').trim();
-    if (!template) {
+    if (!template || template === HEADING_INDEX_DISABLED_VALUE) {
       return '';
     }
 

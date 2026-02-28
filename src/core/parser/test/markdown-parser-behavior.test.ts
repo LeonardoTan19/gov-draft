@@ -99,17 +99,17 @@ describe('MarkdownParser behavior', () => {
     expect(html).toContain('--content-h2-style-size: 14pt;')
   })
 
-  it('supports non-length value override for dynamic style path', () => {
+  it('supports quoted color value for dynamic style path', () => {
     const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
 
-    const markdown = ['::: body.style.color: #FF0000', '段落E', ':::'].join('\n')
+    const markdown = ["::: body.style.colors.text: '#FF0000'", '段落E', ':::'].join('\n')
     const html = parser.parse(markdown)
 
     expect(html).toContain('class="local-style-container"')
-    expect(html).toContain('--content-body-style-color: #FF0000;')
+    expect(html).toContain('--content-body-style-colors-text: #FF0000;')
   })
 
-  it('supports local style container with alias syntax', () => {
+  it('does not support local style container with alias syntax', () => {
     const parser = new MarkdownParser({
       headingNumbering: true,
       disabledSyntax: [],
@@ -121,9 +121,7 @@ describe('MarkdownParser behavior', () => {
     const markdown = ['::: bodyIndent: 1em', '段落B', ':::'].join('\n')
     const html = parser.parse(markdown)
 
-    expect(html).toContain('class="local-style-container"')
-    expect(html).toContain('--content-body-paragraph-indent: 1em;')
-    expect(html).toContain('<p>段落<span class="latin-text">B</span></p>')
+    expect(html).not.toContain('class="local-style-container"')
   })
 
   it('does not support built-in old aliases without parser alias config', () => {
@@ -159,4 +157,112 @@ describe('MarkdownParser behavior', () => {
     expect(html).toContain('<span class="cn-book-title">《</span>')
     expect(html).toContain('<span class="cn-book-title">》</span>')
   })
-})
+  it('supports nested local style containers with proximity priority', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const markdown = [
+      '::: body.paragraph.indent:2em',
+      '外层段落',
+      '::: body.paragraph.indent:0em',
+      '内层段落',
+      ':::',
+      '外层段落2',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    const outerDivIndex = html.indexOf('class="local-style-container"')
+    const innerDivIndex = html.indexOf('class="local-style-container"', outerDivIndex + 1)
+    expect(outerDivIndex).toBeGreaterThan(-1)
+    expect(innerDivIndex).toBeGreaterThan(outerDivIndex)
+
+    expect(html).toContain('--content-body-paragraph-indent: 2em;')
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('外层段落')
+    expect(html).toContain('内层段落')
+    expect(html).toContain('外层段落<span class="latin-text">2</span>')
+  })
+
+  it('supports three-level nesting of local style containers', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const markdown = [
+      '::: body.paragraph.indent:3em',
+      '第一层',
+      '::: body.paragraph.indent:2em',
+      '第二层',
+      '::: body.paragraph.indent:0em',
+      '第三层',
+      ':::',
+      ':::',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    const matches = html.match(/class="local-style-container"/g)
+    expect(matches).toHaveLength(3)
+    expect(html).toContain('--content-body-paragraph-indent: 3em;')
+    expect(html).toContain('--content-body-paragraph-indent: 2em;')
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+  })
+
+  it('supports single ::: line with multiple semicolon-separated rules', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const markdown = [
+      "::: body.paragraph.indent:0em; body.style.colors.text:'#ff0000'",
+      '多规则段落',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('class="local-style-container"')
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('--content-body-style-colors-text: #ff0000;')
+  })
+
+  it('supports full-width semicolon as multi-rule separator', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const markdown = [
+      '::: body.paragraph.indent:0em；body.paragraph.align:right',
+      '全角分号段落',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('--content-body-paragraph-align: right;')
+  })
+
+  it('ignores invalid segments in multi-rule descriptor', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const markdown = [
+      '::: body.paragraph.indent:0em; invalidKey; body.paragraph.align:center',
+      '部分无效段落',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('--content-body-paragraph-align: center;')
+  })
+
+  it('handles unclosed nested container gracefully', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [] })
+
+    const markdown = [
+      '::: body.paragraph.indent:2em',
+      '外层',
+      '::: body.paragraph.indent:0em',
+      '内层未关闭',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    const matches = html.match(/class="local-style-container"/g)
+    expect(matches).toHaveLength(1)
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).not.toContain('--content-body-paragraph-indent: 2em;')
+  })})
