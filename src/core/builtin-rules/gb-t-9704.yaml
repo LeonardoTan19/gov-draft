@@ -111,7 +111,7 @@ page:
     left: 28mm
 parser:
   html: false
-  breaks: true
+  enterStyle: paragraph
   linkify: true
   typographer: true
   headingNumbering: true

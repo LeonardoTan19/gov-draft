@@ -7,6 +7,7 @@ const CSS_COLOR_PATTERN = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb
 const FONT_WEIGHT_SET = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
 const ALIGN_SET = new Set(['left', 'center', 'right', 'justify']);
 const DISABLED_SYNTAX_SET = new Set(['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule']);
+const ENTER_STYLE_SET = new Set(['paragraph', 'lineBreak']);
 const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
 const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
 const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
@@ -122,6 +123,12 @@ function validateBoolean(value: unknown, path: string, issues: ValidationIssue[]
   }
 }
 
+function validateEnterStyle(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value !== 'string' || !ENTER_STYLE_SET.has(value)) {
+    pushError(issues, path, '必须是 paragraph 或 lineBreak');
+  }
+}
+
 function validateContentItem(contentItem: unknown, path: string, issues: ValidationIssue[]): void {
   if (!isObject(contentItem)) {
     pushError(issues, path, '字段缺失或类型错误');
@@ -224,8 +231,8 @@ function validateParser(parser: unknown, issues: ValidationIssue[]): void {
   if (parser.html !== undefined) {
     validateBoolean(parser.html, 'parser.html', issues);
   }
-  if (parser.breaks !== undefined) {
-    validateBoolean(parser.breaks, 'parser.breaks', issues);
+  if (parser.enterStyle !== undefined) {
+    validateEnterStyle(parser.enterStyle, 'parser.enterStyle', issues);
   }
   if (parser.linkify !== undefined) {
     validateBoolean(parser.linkify, 'parser.linkify', issues);

@@ -25,13 +25,18 @@ page:
     left: CssLength
 parser:
   html: boolean
-  breaks: boolean
+  enterStyle: paragraph | lineBreak
   linkify: boolean
   typographer: boolean
   headingNumbering: boolean
   localStyleAliases: Record<string, string>
   disabledSyntax: DisabledSyntax[]
 ```
+
+`parser.enterStyle` 行为约定：
+- `paragraph`：单次回车会将当前行结束为独立段落（等价段落分隔）；
+- `paragraph` 且行尾输入 `//` 后回车：仅该处保留为手动换行（渲染为同一段内 `<br>`）；
+- `lineBreak`：遵循 markdown-it 的自动换行行为（单次换行转 `<br>`）。
 
 ## 2. ContentItem 结构
 

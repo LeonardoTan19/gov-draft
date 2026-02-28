@@ -12,6 +12,7 @@ describe('validateRule', () => {
   it('returns invalid when parser and typed fields are malformed', () => {
     const invalidRule = createValidRule() as unknown as Record<string, unknown>
     invalidRule.parser = {
+      enterStyle: '***',
       headingNumbering: 'true',
       disabledSyntax: ['codeBlock', 'badSyntax'],
       localStyleAliases: {
@@ -23,6 +24,7 @@ describe('validateRule', () => {
     expect(result.valid).toBe(false)
     expect(result.errors).toEqual(
       expect.arrayContaining([
+        'parser.enterStyle: 必须是 paragraph 或 lineBreak',
         'parser.headingNumbering: 必须是布尔值',
         'parser.disabledSyntax.1: 包含非法语法项',
         'parser.localStyleAliases.bodyIndent: 目标路径格式非法（需为点分层级路径）'
