@@ -19,6 +19,9 @@ describe('RuleEngine', () => {
     expect(compiled.cssText).toContain('.cn-book-title')
     expect(compiled.cssText).toContain('.latin-text')
     expect(compiled.cssText).toContain('@page')
+    expect(compiled.cssText).toContain('.paper-sheet.preview-content, .export-document')
+    expect(compiled.cssText).toContain('padding: var(--page-margins-top) var(--page-margins-right) var(--page-margins-bottom) var(--page-margins-left);')
+    expect(compiled.cssText).toContain('margin: 37mm 26mm 35mm 28mm;')
   })
 
   it('throws meaningful error when compile receives invalid rule', () => {
