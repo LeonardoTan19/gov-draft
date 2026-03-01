@@ -1,18 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useDocumentStore } from './stores/doc'
 import { useRuleStore } from './stores/rule'
 import { useStyleInjector } from './composables/useStyleInjector'
-import { useFileSystem } from './composables/useFileSystem'
 import { useMarkdown } from './composables/useMarkdown'
+import { useSplitPane } from './composables/useSplitPane'
 import A4Paper from './components/Preview/A4Paper.vue'
 import CodeMirror from './components/Editor/CodeMirror.vue'
+import Topbar from './components/Common/Topbar.vue'
+import Toolbar from './components/Editor/Toolbar.vue'
+
+interface HistoryState {
+  canUndo: boolean
+  canRedo: boolean
+}
 
 const docStore = useDocumentStore()
 const ruleStore = useRuleStore()
-const { exportMarkdown, exportHtml, exportPdf, importFile } = useFileSystem()
 const { setOptions } = useMarkdown()
 useStyleInjector()
+const { bindWorkspace, workspaceStyle, startResize } = useSplitPane({ minPanelWidth: 360 })
 
 const editorContent = ref(
 `# 关于举办宣讲抗战精神学习培训班的通知
@@ -34,7 +41,7 @@ const editorContent = ref(
 ### 组织参训人员交流学习体会；
 ### 由省委办公厅主任XXX同志主持结业式。
 ## 参加人员
-各单位参加学习的干部 1 至 2 人，各代表需准备时长 3 分钟以内的参会发言。
+各单位参加学习的干部 1 至 2 分，各代表需准备时长 3 分钟以内的参会发言。
 ## 培训纪律与要求
 各单位应高度重视，认真组织，确保参训质量。培训期间实行签到制度，考勤结果将纳入干部学习档案。参训人员须严格遵守培训作息制度和课堂纪律，不得无故迟到、早退或缺席。
 ## 相关事项
@@ -54,91 +61,31 @@ const editorContent = ref(
 :::`
 )
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const exportMenuRef = ref<HTMLElement | null>(null)
-const isExportMenuOpen = ref(false)
-const currentRuleIndex = ref(0)
+const editorRef = ref<InstanceType<typeof CodeMirror> | null>(null)
+const historyState = ref<HistoryState>({
+  canUndo: false,
+  canRedo: false
+})
 
 const updateContent = () => {
   docStore.setContent(editorContent.value)
 }
 
-const handleExportMarkdown = () => {
-  exportMarkdown(docStore.content, 'document.md')
-  closeExportMenu()
+const handleUndo = () => {
+  editorRef.value?.undo()
 }
 
-const handleExportHtml = () => {
-  exportHtml(docStore.html, 'document.html')
-  closeExportMenu()
+const handleRedo = () => {
+  editorRef.value?.redo()
 }
 
-const handleExportPdf = () => {
-  exportPdf()
-  closeExportMenu()
+const handleImported = () => {
+  editorContent.value = docStore.content
 }
 
-const closeExportMenu = () => {
-  isExportMenuOpen.value = false
+const handleHistoryStateChange = (state: HistoryState) => {
+  historyState.value = state
 }
-
-const toggleExportMenu = () => {
-  isExportMenuOpen.value = !isExportMenuOpen.value
-}
-
-const handleDocumentClick = (event: MouseEvent) => {
-  const menuElement = exportMenuRef.value
-  if (!menuElement || !isExportMenuOpen.value) {
-    return
-  }
-
-  const target = event.target as Node | null
-  if (target && !menuElement.contains(target)) {
-    closeExportMenu()
-  }
-}
-
-const handleImportFile = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    try {
-      const content = await importFile(file)
-      editorContent.value = content
-      updateContent()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : '文件导入失败')
-    }
-  }
-}
-
-const switchRule = () => {
-  const rules = ruleStore.availableRules
-  if (rules.length > 0) {
-    currentRuleIndex.value = (currentRuleIndex.value + 1) % rules.length
-    const nextRule = rules[currentRuleIndex.value]
-    if (nextRule) {
-      ruleStore.loadRule(nextRule)
-    }
-  }
-}
-
-const currentRuleName = computed(() => {
-  return ruleStore.currentRule?.name || '未加载'
-})
-
-const parserSummary = computed(() => {
-  const parser = ruleStore.currentRule?.parser
-  if (!parser) {
-    return '未加载解析策略'
-  }
-
-  const disabled = parser.disabledSyntax.length > 0
-    ? parser.disabledSyntax.join('、')
-    : '无'
-
-  return `标题编号: ${parser.headingNumbering ? '开启' : '关闭'} ｜ 禁用语法: ${disabled}`
-})
 
 watch(
   () => ruleStore.currentRule?.parser,
@@ -151,21 +98,8 @@ watch(
 )
 
 onMounted(() => {
-  document.addEventListener('click', handleDocumentClick)
   ruleStore.initializeRule()
-
-  if (ruleStore.currentRule) {
-    const index = ruleStore.availableRules.findIndex(
-      (item) => item.name === ruleStore.currentRule?.name
-    )
-    currentRuleIndex.value = index >= 0 ? index : 0
-  }
-
   updateContent()
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick)
 })
 
 if (import.meta.hot) {
@@ -178,107 +112,49 @@ if (import.meta.hot) {
 
 <template>
   <div class="app-shell">
-    <header class="topbar">
-      <h1 class="topbar__title">
-        gov-draft 公文排版系统
-      </h1>
-      <div class="topbar__meta">
-        <span class="meta-pill">字数 {{ docStore.getWordCount }}</span>
-        <span class="meta-pill">字符 {{ docStore.getCharCount }}</span>
-      </div>
-    </header>
+    <Topbar />
 
-    <section class="toolbar">
-      <div class="toolbar__actions">
-        <button
-          class="btn btn--primary"
-          @click="() => fileInput?.click()"
-        >
-          导入 Markdown
-        </button>
-        <input
-          ref="fileInput"
-          type="file"
-          accept=".md"
-          @change="handleImportFile"
-        >
-        <div
-          ref="exportMenuRef"
-          class="export-menu"
-        >
-          <button
-            class="btn btn--secondary"
-            type="button"
-            @click="toggleExportMenu"
-          >
-            导出
-          </button>
-          <transition name="export-menu-transition">
-            <div
-              v-if="isExportMenuOpen"
-              class="export-menu__content"
-            >
-              <button
-                class="export-menu__item"
-                @click="handleExportMarkdown"
-              >
-                导出 Markdown
-              </button>
-              <button
-                class="export-menu__item"
-                @click="handleExportHtml"
-              >
-                导出 HTML
-              </button>
-              <button
-                class="export-menu__item"
-                @click="handleExportPdf"
-              >
-                导出 PDF
-              </button>
-            </div>
-          </transition>
-        </div>
-      </div>
-      <div class="toolbar__rule">
-        <div class="rule-tooltip">
-          <button
-            class="btn btn--rule"
-            @click="switchRule"
-          >
-            切换标准：{{ currentRuleName }}
-          </button>
-          <span
-            class="rule-tooltip__content"
-            role="tooltip"
-          >
-            {{ parserSummary }}
-          </span>
-        </div>
-      </div>
-    </section>
+    <main
+      :ref="bindWorkspace"
+      class="editor-workspace"
+      :style="workspaceStyle"
+    >
+      <section
+        class="panel editor-panel"
+        aria-label="编辑器"
+      >
+        <Toolbar 
+          :can-undo="historyState.canUndo"
+          :can-redo="historyState.canRedo"
+          @undo="handleUndo"
+          @redo="handleRedo"
+          @imported="handleImported"
+        />
 
-    <main class="workspace">
-      <section class="panel editor-panel">
-        <div class="panel__header">
-          <h2>Markdown 编辑区</h2>
-          <span class="panel__tag">实时同步 · 多层语法糖建议用 Tab 缩进</span>
-        </div>
         <CodeMirror
-          :model-value="editorContent"
-          @update:model-value="(val: string) => { editorContent = val; updateContent() }"
+          ref="editorRef"
+          v-model="editorContent"
+          @update:model-value="updateContent"
+          @history-state-change="handleHistoryStateChange"
         />
       </section>
 
-      <section class="panel preview-panel">
-        <div class="panel__header">
-          <h2>纸张预览</h2>
-          <span class="panel__tag">A4 视图</span>
-        </div>
-        <div class="paper-stage">
-          <A4Paper :html="docStore.html" />
-        </div>
+      <div
+        class="editor-preview-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="编辑区与预览区宽度调节"
+        @pointerdown="startResize"
+      />
+
+      <section
+        class="panel preview-panel"
+        aria-label="预览"
+      >
+        <A4Paper :html="docStore.html" />
       </section>
     </main>
   </div>
 </template>
+
+<style scoped src="./assets/styles/components/app-shell.scss" lang="scss"></style>

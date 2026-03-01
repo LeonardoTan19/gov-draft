@@ -1,10 +1,11 @@
 import { EditorState, type Extension } from '@codemirror/state';
 import { markdown } from '@codemirror/lang-markdown';
 import { indentUnit } from '@codemirror/language';
-import { defaultKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { EditorView, keymap } from '@codemirror/view';
 import { createSugarFoldExtension } from './extensions/sugarFoldExtension';
 import { createHeadingRainbowFoldExtension } from './extensions/headingRainbowFoldExtension';
+import { createColorPreviewExtension } from './extensions/colorPreviewExtension';
 import { editorTheme } from './theme';
 
 interface CreateEditorStateOptions {
@@ -14,11 +15,13 @@ interface CreateEditorStateOptions {
 
 export function createEditorState(options: CreateEditorStateOptions): EditorState {
   const extensions: Extension[] = [
-    keymap.of([indentWithTab, ...defaultKeymap]),
+    history(),
+    keymap.of([indentWithTab, ...historyKeymap, ...defaultKeymap]),
     indentUnit.of('    '),
     EditorView.lineWrapping,
     markdown(),
     editorTheme,
+    createColorPreviewExtension(),
     createSugarFoldExtension(),
     createHeadingRainbowFoldExtension(),
     EditorView.updateListener.of((update) => {

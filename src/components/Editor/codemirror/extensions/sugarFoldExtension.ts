@@ -9,9 +9,15 @@ interface SugarInteractionState {
   cursorLine: number | null;
 }
 
+interface SugarBlock {
+  startLine: number;
+  endLine: number;
+  parentStartLine: number | null;
+}
+
 const setHoveredLineEffect = StateEffect.define<number | null>();
 const setCursorLineEffect = StateEffect.define<number | null>();
-const SUGAR_HOVER_EXPAND_DELAY_MS = 80;
+const SUGAR_HOVER_EXPAND_DELAY_MS = 100;
 
 const sugarInteractionField = StateField.define<SugarInteractionState>({
   create() {
@@ -57,19 +63,55 @@ function resolveSugarTokenStart(lineFrom: number, lineText: string): number {
 }
 
 function isExpandedByLine(
-  interaction: SugarInteractionState,
-  lineNumber: number,
-  pairLine: number | undefined
+  expandedLines: ReadonlySet<number>,
+  lineNumber: number
 ): boolean {
-  if (interaction.hoveredLine === lineNumber || interaction.cursorLine === lineNumber) {
-    return true;
+  return expandedLines.has(lineNumber);
+}
+
+function collectExpandedLines(
+  interaction: SugarInteractionState,
+  pairedLines: ReadonlyMap<number, number>,
+  blocksByBoundaryLine: ReadonlyMap<number, SugarBlock>
+): Set<number> {
+  const expandedLines = new Set<number>();
+  const queue: number[] = [];
+
+  const enqueue = (lineNumber: number | null | undefined): void => {
+    if (lineNumber == null || expandedLines.has(lineNumber)) {
+      return;
+    }
+    expandedLines.add(lineNumber);
+    queue.push(lineNumber);
+  };
+
+  enqueue(interaction.hoveredLine);
+  enqueue(interaction.cursorLine);
+
+  while (queue.length > 0) {
+    const lineNumber = queue.shift();
+    if (lineNumber === undefined) {
+      continue;
+    }
+
+    const pairLine = pairedLines.get(lineNumber);
+    if (pairLine !== undefined) {
+      enqueue(pairLine);
+    }
+
+    const block = blocksByBoundaryLine.get(lineNumber);
+    if (!block || block.parentStartLine == null) {
+      continue;
+    }
+
+    enqueue(block.parentStartLine);
+    const parentEndLine = pairedLines.get(block.parentStartLine);
+    if (parentEndLine !== undefined) {
+      enqueue(parentEndLine);
+    }
   }
 
-  if (pairLine === undefined) {
-    return false;
-  }
-
-  return interaction.hoveredLine === pairLine || interaction.cursorLine === pairLine;
+  return expandedLines;
 }
 
 function buildSugarDecorations(state: EditorState): DecorationSet {
@@ -77,13 +119,17 @@ function buildSugarDecorations(state: EditorState): DecorationSet {
   const depthStack: number[] = [];
   const doc = state.doc;
   const interaction = state.field(sugarInteractionField);
-  const blockStack: Array<{ startLine: number }> = [];
-  const closedBlocks: Array<{ startLine: number; endLine: number }> = [];
+  const blockStack: Array<{ startLine: number; parentStartLine: number | null }> = [];
+  const closedBlocks: SugarBlock[] = [];
 
   for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber += 1) {
     const lineText = doc.line(lineNumber).text;
     if (SUGAR_OPEN_PATTERN.test(lineText)) {
-      blockStack.push({ startLine: lineNumber });
+      const parent = blockStack[blockStack.length - 1];
+      blockStack.push({
+        startLine: lineNumber,
+        parentStartLine: parent?.startLine ?? null
+      });
       continue;
     }
     if (SUGAR_CLOSE_PATTERN.test(lineText) && blockStack.length > 0) {
@@ -91,17 +137,22 @@ function buildSugarDecorations(state: EditorState): DecorationSet {
       if (open) {
         closedBlocks.push({
           startLine: open.startLine,
-          endLine: lineNumber
+          endLine: lineNumber,
+          parentStartLine: open.parentStartLine
         });
       }
     }
   }
 
   const pairedLines = new Map<number, number>();
+  const blocksByBoundaryLine = new Map<number, SugarBlock>();
   for (const item of closedBlocks) {
     pairedLines.set(item.startLine, item.endLine);
     pairedLines.set(item.endLine, item.startLine);
+    blocksByBoundaryLine.set(item.startLine, item);
+    blocksByBoundaryLine.set(item.endLine, item);
   }
+  const expandedLines = collectExpandedLines(interaction, pairedLines, blocksByBoundaryLine);
 
   for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber += 1) {
     const line = doc.line(lineNumber);
@@ -113,8 +164,7 @@ function buildSugarDecorations(state: EditorState): DecorationSet {
       const depthClass = `cm-sugar-depth-${depth % 6}`;
       const tokenStart = resolveSugarTokenStart(line.from, lineText);
       const descriptorFrom = Math.min(tokenStart + 3, line.to);
-      const pairLine = pairedLines.get(lineNumber);
-      const isExpanded = isExpandedByLine(interaction, lineNumber, pairLine);
+      const isExpanded = isExpandedByLine(expandedLines, lineNumber);
 
       builder.add(
         line.from,
@@ -149,8 +199,7 @@ function buildSugarDecorations(state: EditorState): DecorationSet {
       const depth = depthStack.pop() ?? 0;
       const depthClass = `cm-sugar-depth-${depth % 6}`;
       const tokenStart = resolveSugarTokenStart(line.from, lineText);
-      const pairLine = pairedLines.get(lineNumber);
-      const isExpanded = isExpandedByLine(interaction, lineNumber, pairLine);
+      const isExpanded = isExpandedByLine(expandedLines, lineNumber);
 
       builder.add(
         line.from,

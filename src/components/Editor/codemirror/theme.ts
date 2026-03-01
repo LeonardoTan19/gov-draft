@@ -145,5 +145,42 @@ export const editorTheme = EditorView.theme({
   '.cm-sugar-depth-2': { color: '#06b6d4' },
   '.cm-sugar-depth-3': { color: '#22c55e' },
   '.cm-sugar-depth-4': { color: '#f59e0b' },
-  '.cm-sugar-depth-5': { color: '#f43f5e' }
+  '.cm-sugar-depth-5': { color: '#f43f5e' },
+  '.cm-color-preview': {
+    display: 'inline-flex',
+    position: 'relative',
+    marginRight: '4px',
+    verticalAlign: 'middle'
+  },
+  '.cm-color-swatch': {
+    width: '10px',
+    height: '10px',
+    borderRadius: '2px',
+    border: '1px solid #94a3b8',
+    padding: '0',
+    cursor: 'pointer'
+  },
+  '.cm-color-picker-panel': {
+    display: 'none',
+    position: 'absolute',
+    top: 'calc(100% + 6px)',
+    left: '0',
+    background: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: '8px',
+    padding: '4px',
+    zIndex: '30',
+    boxShadow: '0 6px 16px #0f172a26'
+  },
+  '.cm-color-preview:hover .cm-color-picker-panel, .cm-color-preview:focus-within .cm-color-picker-panel': {
+    display: 'inline-flex'
+  },
+  '.cm-color-picker-input': {
+    width: '24px',
+    height: '24px',
+    border: '0',
+    background: 'transparent',
+    padding: '0',
+    cursor: 'pointer'
+  }
 });
