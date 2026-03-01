@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useDocumentStore } from './stores/doc'
 import { useRuleStore } from './stores/rule'
 import { useStyleInjector } from './composables/useStyleInjector'
@@ -14,8 +14,8 @@ const { exportMarkdown, exportHtml, exportPdf, importFile } = useFileSystem()
 const { setOptions } = useMarkdown()
 useStyleInjector()
 
-const editorContent = ref(`
-# 关于举办宣讲抗战精神学习培训班的通知
+const editorContent = ref(
+`# 关于举办宣讲抗战精神学习培训班的通知
 ::: body.paragraph.indent:0em ; body.style.colors.text: '#0000ff'
     ::: body.style.colors.text: '#ff0000'
 各部门办公室、各直属机构办公室、各地（市）党委办公室：
@@ -51,10 +51,12 @@ const editorContent = ref(`
 ::: body.paragraph.align:right
 山北省委政府办公厅
 2025年9月26日
-:::
-`)
+:::`
+)
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const exportMenuRef = ref<HTMLElement | null>(null)
+const isExportMenuOpen = ref(false)
 const currentRuleIndex = ref(0)
 
 const updateContent = () => {
@@ -63,14 +65,37 @@ const updateContent = () => {
 
 const handleExportMarkdown = () => {
   exportMarkdown(docStore.content, 'document.md')
+  closeExportMenu()
 }
 
 const handleExportHtml = () => {
   exportHtml(docStore.html, 'document.html')
+  closeExportMenu()
 }
 
 const handleExportPdf = () => {
   exportPdf()
+  closeExportMenu()
+}
+
+const closeExportMenu = () => {
+  isExportMenuOpen.value = false
+}
+
+const toggleExportMenu = () => {
+  isExportMenuOpen.value = !isExportMenuOpen.value
+}
+
+const handleDocumentClick = (event: MouseEvent) => {
+  const menuElement = exportMenuRef.value
+  if (!menuElement || !isExportMenuOpen.value) {
+    return
+  }
+
+  const target = event.target as Node | null
+  if (target && !menuElement.contains(target)) {
+    closeExportMenu()
+  }
 }
 
 const handleImportFile = async (event: Event) => {
@@ -126,6 +151,7 @@ watch(
 )
 
 onMounted(() => {
+  document.addEventListener('click', handleDocumentClick)
   ruleStore.initializeRule()
 
   if (ruleStore.currentRule) {
@@ -137,15 +163,25 @@ onMounted(() => {
 
   updateContent()
 })
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
+
+if (import.meta.hot) {
+  import.meta.hot.accept('./core/builtin-rules/gb-t-9704.yaml?raw', () => {
+    ruleStore.initializeRule()
+    updateContent()
+  })
+}
 </script>
 
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <div class="topbar__title-group">
-        <h1 class="topbar__title">gov-draft 公文排版系统</h1>
-        <p class="topbar__subtitle">标准驱动 · 解析可配置 · 预览导出同源</p>
-      </div>
+      <h1 class="topbar__title">
+        gov-draft 公文排版系统
+      </h1>
       <div class="topbar__meta">
         <span class="meta-pill">字数 {{ docStore.getWordCount }}</span>
         <span class="meta-pill">字符 {{ docStore.getCharCount }}</span>
@@ -154,7 +190,10 @@ onMounted(() => {
 
     <section class="toolbar">
       <div class="toolbar__actions">
-        <button class="btn btn--primary" @click="() => fileInput?.click()">
+        <button
+          class="btn btn--primary"
+          @click="() => fileInput?.click()"
+        >
           导入 Markdown
         </button>
         <input
@@ -162,22 +201,60 @@ onMounted(() => {
           type="file"
           accept=".md"
           @change="handleImportFile"
-        />
-        <button class="btn btn--secondary" @click="handleExportMarkdown">
-          导出 Markdown
-        </button>
-        <button class="btn btn--secondary" @click="handleExportHtml">
-          导出 HTML
-        </button>
-        <button class="btn btn--secondary" @click="handleExportPdf">
-          导出 PDF
-        </button>
+        >
+        <div
+          ref="exportMenuRef"
+          class="export-menu"
+        >
+          <button
+            class="btn btn--secondary"
+            type="button"
+            @click="toggleExportMenu"
+          >
+            导出
+          </button>
+          <transition name="export-menu-transition">
+            <div
+              v-if="isExportMenuOpen"
+              class="export-menu__content"
+            >
+              <button
+                class="export-menu__item"
+                @click="handleExportMarkdown"
+              >
+                导出 Markdown
+              </button>
+              <button
+                class="export-menu__item"
+                @click="handleExportHtml"
+              >
+                导出 HTML
+              </button>
+              <button
+                class="export-menu__item"
+                @click="handleExportPdf"
+              >
+                导出 PDF
+              </button>
+            </div>
+          </transition>
+        </div>
       </div>
       <div class="toolbar__rule">
-        <button class="btn btn--rule" @click="switchRule">
-          切换标准：{{ currentRuleName }}
-        </button>
-        <p class="toolbar__hint">{{ parserSummary }}</p>
+        <div class="rule-tooltip">
+          <button
+            class="btn btn--rule"
+            @click="switchRule"
+          >
+            切换标准：{{ currentRuleName }}
+          </button>
+          <span
+            class="rule-tooltip__content"
+            role="tooltip"
+          >
+            {{ parserSummary }}
+          </span>
+        </div>
       </div>
     </section>
 
@@ -203,10 +280,5 @@ onMounted(() => {
         </div>
       </section>
     </main>
-
-    <footer class="statusbar">
-      <span>当前标准：{{ currentRuleName }}</span>
-      <span>解析策略：{{ parserSummary }}</span>
-    </footer>
   </div>
 </template>
