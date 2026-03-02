@@ -18,6 +18,8 @@ content:
 page:
   size: A4 | A3 | Letter
   orientation: portrait | landscape
+  pagination:
+    enabled: boolean
   margins:
     top: CssLength
     right: CssLength
@@ -112,3 +114,36 @@ paragraph:
 
 - 旧写法（如 `indent`、`bodyIndent`、`--font-heading-h1-indent`）**不再内置兼容**；
 - 请统一迁移到规范路径与新变量命名（`--content-...`）。
+
+## 7. 页码配置（独立 YAML）
+
+页码是否启用由主规则中的 `page.pagination.enabled` 控制；页码详细设置放在独立 YAML（内置为 `src/core/builtin-rules/gb-t-9704-pagination.yaml`），支持多 section：
+
+```yaml
+section1:
+  pagination:
+    format: '— {currentPage} / {totalPage} —'
+    numberStyle: arabic
+    style:
+      fonts:
+        latinFamily: Times New Roman, serif
+        cjkFamily: 仿宋_GB2312, FangSong, STFangsong, serif
+      size: 14pt
+      weight: 400
+      colors:
+        text: '#000000'
+    position:
+      vertical:
+        anchor: bottom
+        offset: 7mm
+      horizontal:
+        anchor: center
+        offset: 0mm
+```
+
+说明：
+- section 键名格式为 `section1`、`section2`...；编辑器按 `h1` 自动切分 section。
+- `format` 支持变量：`{currentPage}`、`{CurrentPage}`、`{totalPage}`、`{TotalPage}`。
+- `{}` 内支持简单四则运算，例如 `{currentPage-1}`、`{CurrentPage/TotalPage}`。
+- `numberStyle` 支持 `arabic | roman | zhHans | zhHant`，用于变量/表达式结果的数字显示风格。
+- `position.horizontal.anchor` 支持 `left|center|right|outside|inside`，`outside/inside` 按奇偶页自动切换。

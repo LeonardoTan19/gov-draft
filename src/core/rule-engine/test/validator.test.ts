@@ -81,4 +81,47 @@ describe('validateRule', () => {
     expect(result.valid).toBe(true)
     expect(result.errors).toHaveLength(0)
   })
+
+  it('returns invalid when pagination enabled but section config is missing', () => {
+    const invalidRule = createValidRule()
+    invalidRule.page.pagination = { enabled: true }
+    delete invalidRule.paginationSections
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('paginationSections: 页码启用时必须提供 section 页码配置对象')
+  })
+
+  it('returns invalid when pagination format contains illegal expression', () => {
+    const invalidRule = createValidRule()
+    const section1 = invalidRule.paginationSections?.section1
+    if (!section1) {
+      throw new Error('section1 分页配置缺失')
+    }
+
+    section1.pagination.format = '第{currentPage+alert(1)}页'
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        'paginationSections.section1.pagination.format: 表达式非法: {currentPage+alert(1)}'
+      ])
+    )
+  })
+
+  it('returns invalid when pagination numberStyle is unknown', () => {
+    const invalidRule = createValidRule()
+    const section1 = invalidRule.paginationSections?.section1
+    if (!section1) {
+      throw new Error('section1 分页配置缺失')
+    }
+
+    section1.pagination.numberStyle = 'foobar' as 'arabic'
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain(
+      'paginationSections.section1.pagination.numberStyle: 必须是 arabic/roman/zhHans/zhHant 之一'
+    )
+  })
 })

@@ -8,6 +8,7 @@ export type CssColor = `#${string}` | `rgb(${string})` | `rgba(${string})` | `hs
 export type CssLineHeight = `${number}` | CssLength;
 export type CssParagraphSpacing = CssLength | `${number}lines` | '';
 export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+export type NumberStyle = 'arabic' | 'roman' | 'zhHans' | 'zhHant';
 export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
@@ -66,7 +67,48 @@ export interface PageConfig {
     bottom: CssLength;
     left: CssLength;
   };
+  pagination?: {
+    enabled: boolean;
+  };
 }
+
+export type PaginationVerticalAnchor = 'top' | 'bottom';
+export type PaginationHorizontalAnchor = 'left' | 'center' | 'right' | 'outside' | 'inside';
+
+export interface PaginationPositionConfig {
+  vertical: {
+    anchor: PaginationVerticalAnchor;
+    offset: CssLength;
+  };
+  horizontal: {
+    anchor: PaginationHorizontalAnchor;
+    offset: CssLength;
+  };
+}
+
+export interface PaginationStyleConfig {
+  fonts: TextFontConfig;
+  size: CssLength;
+  weight: FontWeightValue;
+  colors: {
+    text: CssColor;
+  };
+}
+
+export interface PaginationConfig {
+  format: string;
+  numberStyle?: NumberStyle;
+  style: PaginationStyleConfig;
+  position: PaginationPositionConfig;
+}
+
+export interface SectionPaginationConfig {
+  pagination: PaginationConfig & {
+    enabled?: boolean;
+  };
+}
+
+export type PaginationSectionsConfig = Record<string, SectionPaginationConfig>;
 
 export interface ParserConfig {
   html?: boolean;
@@ -105,6 +147,7 @@ export interface RuleConfig {
   description?: string;
   content: ContentConfig;
   page: PageConfig;
+  paginationSections?: PaginationSectionsConfig;
   parser: ParserConfig;
 }
 
@@ -133,5 +176,6 @@ export interface Rule {
   description?: string;
   content: ContentConfig;
   page: PageConfig;
+  paginationSections?: PaginationSectionsConfig;
   parser: ParserConfig;
 }

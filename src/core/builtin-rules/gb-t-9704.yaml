@@ -104,6 +104,8 @@ content:
 page:
   size: A4
   orientation: portrait
+  pagination:
+    enabled: true
   margins:
     top: 37mm
     right: 26mm

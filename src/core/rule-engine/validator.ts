@@ -8,6 +8,10 @@ const FONT_WEIGHT_SET = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
 const ALIGN_SET = new Set(['left', 'center', 'right', 'justify']);
 const DISABLED_SYNTAX_SET = new Set(['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule']);
 const ENTER_STYLE_SET = new Set(['paragraph', 'lineBreak']);
+const PAGINATION_VERTICAL_ANCHOR_SET = new Set(['top', 'bottom']);
+const PAGINATION_HORIZONTAL_ANCHOR_SET = new Set(['left', 'center', 'right', 'outside', 'inside']);
+const PAGINATION_NUMBER_STYLE_SET = new Set(['arabic', 'roman', 'zhHans', 'zhHant']);
+const PAGINATION_EXPRESSION_ALLOWED_PATTERN = /^[0-9()+\-*/.\sA-Za-z_]+$/;
 const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
 const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
 const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
@@ -34,6 +38,7 @@ export function validateRule(ruleConfig: unknown): ValidationResult {
 
   validateContent(rule.content, issues);
   validatePage(rule.page, issues);
+  validatePaginationSections(rule.page, rule.paginationSections, issues);
   validateParser(rule.parser, issues);
 
   return buildValidationResult(issues);
@@ -220,6 +225,156 @@ function validatePage(page: unknown, issues: ValidationIssue[]): void {
   validateCssLength(page.margins.right, 'page.margins.right', issues);
   validateCssLength(page.margins.bottom, 'page.margins.bottom', issues);
   validateCssLength(page.margins.left, 'page.margins.left', issues);
+
+  if (page.pagination !== undefined) {
+    if (!isObject(page.pagination)) {
+      pushError(issues, 'page.pagination', '必须是对象');
+    } else {
+      validateBoolean(page.pagination.enabled, 'page.pagination.enabled', issues);
+    }
+  }
+}
+
+function validatePaginationSections(page: unknown, paginationSections: unknown, issues: ValidationIssue[]): void {
+  const pageConfig = isObject(page) ? page : null;
+  const paginationEnabled = pageConfig?.pagination;
+
+  if (!paginationEnabled || !isObject(paginationEnabled) || paginationEnabled.enabled !== true) {
+    return;
+  }
+
+  if (!isObject(paginationSections)) {
+    pushError(issues, 'paginationSections', '页码启用时必须提供 section 页码配置对象');
+    return;
+  }
+
+  const sectionEntries = Object.entries(paginationSections);
+  if (sectionEntries.length === 0) {
+    pushError(issues, 'paginationSections', '至少需要一个 section 页码配置');
+    return;
+  }
+
+  sectionEntries.forEach(([sectionKey, sectionValue]) => {
+    if (!/^section\d+$/.test(sectionKey)) {
+      pushError(issues, `paginationSections.${sectionKey}`, 'section 键名必须是 section + 数字（如 section1）');
+      return;
+    }
+
+    if (!isObject(sectionValue)) {
+      pushError(issues, `paginationSections.${sectionKey}`, '必须是对象');
+      return;
+    }
+
+    validatePaginationConfig(sectionValue.pagination, `paginationSections.${sectionKey}.pagination`, issues);
+  });
+}
+
+function validatePaginationConfig(pagination: unknown, path: string, issues: ValidationIssue[]): void {
+  if (!isObject(pagination)) {
+    pushError(issues, path, '字段缺失或类型错误');
+    return;
+  }
+
+  if (pagination.enabled !== undefined) {
+    validateBoolean(pagination.enabled, `${path}.enabled`, issues);
+  }
+
+  if (pagination.numberStyle !== undefined) {
+    if (typeof pagination.numberStyle !== 'string' || !PAGINATION_NUMBER_STYLE_SET.has(pagination.numberStyle)) {
+      pushError(issues, `${path}.numberStyle`, '必须是 arabic/roman/zhHans/zhHant 之一');
+    }
+  }
+
+  validatePaginationFormat(pagination.format, `${path}.format`, issues);
+
+  if (!isObject(pagination.style)) {
+    pushError(issues, `${path}.style`, '字段缺失或类型错误');
+  } else {
+    validatePaginationStyle(pagination.style, `${path}.style`, issues);
+  }
+
+  if (!isObject(pagination.position)) {
+    pushError(issues, `${path}.position`, '字段缺失或类型错误');
+  } else {
+    validatePaginationPosition(pagination.position, `${path}.position`, issues);
+  }
+}
+
+function validatePaginationStyle(style: AnyRecord, path: string, issues: ValidationIssue[]): void {
+  if (!isObject(style.fonts)) {
+    pushError(issues, `${path}.fonts`, '字段缺失或类型错误');
+  } else {
+    validateString(style.fonts.latinFamily, `${path}.fonts.latinFamily`, issues);
+    validateString(style.fonts.cjkFamily, `${path}.fonts.cjkFamily`, issues);
+    if (style.fonts.cnQuoteFamily !== undefined) {
+      validateString(style.fonts.cnQuoteFamily, `${path}.fonts.cnQuoteFamily`, issues);
+    }
+    if (style.fonts.cnBookTitleFamily !== undefined) {
+      validateString(style.fonts.cnBookTitleFamily, `${path}.fonts.cnBookTitleFamily`, issues);
+    }
+  }
+
+  validateCssLength(style.size, `${path}.size`, issues);
+  validateFontWeight(style.weight, `${path}.weight`, issues);
+
+  if (!isObject(style.colors)) {
+    pushError(issues, `${path}.colors`, '字段缺失或类型错误');
+    return;
+  }
+
+  validateCssColor(style.colors.text, `${path}.colors.text`, issues);
+}
+
+function validatePaginationPosition(position: AnyRecord, path: string, issues: ValidationIssue[]): void {
+  if (!isObject(position.vertical)) {
+    pushError(issues, `${path}.vertical`, '字段缺失或类型错误');
+  } else {
+    if (typeof position.vertical.anchor !== 'string' || !PAGINATION_VERTICAL_ANCHOR_SET.has(position.vertical.anchor)) {
+      pushError(issues, `${path}.vertical.anchor`, '必须是 top 或 bottom');
+    }
+    validateCssLength(position.vertical.offset, `${path}.vertical.offset`, issues);
+  }
+
+  if (!isObject(position.horizontal)) {
+    pushError(issues, `${path}.horizontal`, '字段缺失或类型错误');
+  } else {
+    if (typeof position.horizontal.anchor !== 'string' || !PAGINATION_HORIZONTAL_ANCHOR_SET.has(position.horizontal.anchor)) {
+      pushError(issues, `${path}.horizontal.anchor`, '必须是 left/center/right/outside/inside 之一');
+    }
+    validateCssLength(position.horizontal.offset, `${path}.horizontal.offset`, issues);
+  }
+}
+
+function validatePaginationFormat(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    pushError(issues, path, '必须是非空字符串');
+    return;
+  }
+
+  const expressionMatches = value.matchAll(/\{([^{}]+)\}/g);
+  for (const match of expressionMatches) {
+    const expression = (match[1] ?? '').trim();
+    if (!isValidPaginationExpression(expression)) {
+      pushError(issues, path, `表达式非法: {${expression}}`);
+    }
+  }
+}
+
+function isValidPaginationExpression(expression: string): boolean {
+  if (expression.length === 0) {
+    return false;
+  }
+
+  if (!PAGINATION_EXPRESSION_ALLOWED_PATTERN.test(expression)) {
+    return false;
+  }
+
+  const replaced = expression.replace(/\b(currentPage|CurrentPage|totalPage|TotalPage)\b/g, '1');
+  if (/[A-Za-z_]/.test(replaced)) {
+    return false;
+  }
+
+  return /^[0-9()+\-*/.\s]+$/.test(replaced);
 }
 
 function validateParser(parser: unknown, issues: ValidationIssue[]): void {

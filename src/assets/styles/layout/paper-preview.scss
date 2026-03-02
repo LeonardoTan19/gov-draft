@@ -34,6 +34,7 @@
 }
 
 .paper-sheet {
+	position: relative;
 	width: var(--page-dimension-width, 210mm);
 	height: var(--page-dimension-height, 297mm);
 	min-height: var(--page-dimension-height, 297mm);
@@ -46,6 +47,16 @@
 	box-shadow:
 		0 16px 40px rgba(15, 23, 42, 0.12),
 		0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.paper-pagination {
+	position: absolute;
+	max-width: calc(100% - var(--page-margins-left, 28mm) - var(--page-margins-right, 26mm));
+	line-height: 1;
+	white-space: nowrap;
+	pointer-events: none;
+	user-select: none;
+	z-index: 2;
 }
 
 .paper-stack {

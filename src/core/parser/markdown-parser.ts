@@ -2,6 +2,7 @@ import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import type { HeadingLevel, ParserConfig } from '../../types/rule';
 import { toCssCustomProperty } from '../rule-engine/css-variable';
+import { NumberFormatUtils } from '../utils/number-format-utils';
 
 export type MarkdownOptions = ParserConfig;
 
@@ -443,10 +444,10 @@ export class MarkdownParser {
     }
 
     const placeholderValues: Record<NumberingPlaceholder, string> = {
-      '{number}': String(currentIndex),
-      '{zhHansIndex}': this.toZhHansIndex(currentIndex),
-      '{zhHantIndex}': this.toZhHantIndex(currentIndex),
-      '{romanIndex}': this.toRomanIndex(currentIndex)
+      '{number}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
+      '{zhHansIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHans'),
+      '{zhHantIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHant'),
+      '{romanIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman')
     };
 
     let formatted = template;
@@ -463,59 +464,5 @@ export class MarkdownParser {
     }
 
     return `${template}${currentIndex}`;
-  }
-
-  private toZhHansIndex(index: number): string {
-    return this.toChineseIndex(index, ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], ['十', '百', '千']);
-  }
-
-  private toZhHantIndex(index: number): string {
-    return this.toChineseIndex(index, ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'], ['拾', '佰', '仟']);
-  }
-
-  private toRomanIndex(index: number): string {
-    return String(index);
-  }
-
-  private toChineseIndex(index: number, digits: string[], units: [string, string, string]): string {
-    if (index <= 0) {
-      return String(index);
-    }
-
-    if (index >= 10000) {
-      return String(index);
-    }
-
-    if (index < 10) {
-      return digits[index] ?? String(index);
-    }
-
-    const numberText = String(index);
-    const numbers = numberText.split('').map((char) => Number(char));
-    const length = numbers.length;
-    const zeroChar = digits[0] ?? '零';
-    let result = '';
-
-    for (let i = 0; i < length; i += 1) {
-      const digit = numbers[i] ?? 0;
-      const position = length - i - 1;
-
-      if (digit === 0) {
-        const hasNonZeroAfter = numbers.slice(i + 1).some((next) => next !== 0);
-        if (hasNonZeroAfter && result && !result.endsWith(zeroChar)) {
-          result += zeroChar;
-        }
-        continue;
-      }
-
-      if (position === 1 && digit === 1 && length === 2) {
-        result += units[0];
-        continue;
-      }
-
-      result += `${digits[digit] ?? String(digit)}${position > 0 ? units[position - 1] ?? '' : ''}`;
-    }
-
-    return result;
   }
 }
