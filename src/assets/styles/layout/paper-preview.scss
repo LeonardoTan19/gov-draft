@@ -91,6 +91,8 @@
 
 .paper-measure__content {
 	height: 100%;
+	display: flow-root;
+	overflow: hidden;
 }
 
 .paper-sheet.preview-content {

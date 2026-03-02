@@ -75,4 +75,67 @@ describe('usePaginator sectionStyle pagination matching', () => {
     expect(pageMetas.value[0]?.sectionKey).toBe('section2')
     expect(pageMetas.value[0]?.pagination?.format).toBe('第{currentPage}页(section2)')
   })
+
+  it('supports dynamic h1.sectionStyle from local style container sugar', async () => {
+    const ruleStore = useRuleStore()
+    const rule = createValidRule()
+
+    rule.paginationSections = {
+      ...rule.paginationSections,
+      section1: {
+        pagination: {
+          ...(rule.paginationSections?.section?.pagination ?? {
+            format: 'fallback',
+            style: {
+              fonts: {
+                latinFamily: 'Times New Roman, serif',
+                cjkFamily: '仿宋_GB2312, FangSong, STFangsong, serif'
+              },
+              size: '14pt',
+              weight: 400,
+              colors: {
+                text: '#000000'
+              }
+            },
+            position: {
+              vertical: {
+                anchor: 'bottom',
+                offset: '7mm'
+              },
+              horizontal: {
+                anchor: 'center',
+                offset: '0mm'
+              }
+            }
+          }),
+          format: '第{currentPage}页(动态section1)'
+        }
+      }
+    }
+
+    ruleStore.loadRule(rule)
+
+    const { paginate, pageMetas } = usePaginator()
+    const measureContent = document.createElement('div')
+
+    await paginate('<div class="local-style-container" style="--content-h1-section-style: section1;"><h1>标题</h1></div><p>正文</p>', measureContent)
+
+    expect(pageMetas.value).toHaveLength(1)
+    expect(pageMetas.value[0]?.sectionKey).toBe('section1')
+    expect(pageMetas.value[0]?.pagination?.format).toBe('第{currentPage}页(动态section1)')
+  })
+
+  it('applies stable measure container styles to avoid margin-collapse pagination bug', async () => {
+    const ruleStore = useRuleStore()
+    const rule = createValidRule()
+    ruleStore.loadRule(rule)
+
+    const { paginate } = usePaginator()
+    const measureContent = document.createElement('div')
+
+    await paginate('<h1>标题</h1><p>正文</p>', measureContent)
+
+    expect(measureContent.style.display).toBe('flow-root')
+    expect(measureContent.style.overflow).toBe('hidden')
+  })
 })
