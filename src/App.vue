@@ -157,4 +157,4 @@ if (import.meta.hot) {
   </div>
 </template>
 
-<style scoped src="./assets/styles/components/app-shell.scss" lang="scss"></style>
+

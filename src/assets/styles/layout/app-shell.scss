@@ -1,0 +1,68 @@
+@use '../utilities/breakpoints' as bp;
+
+.app-shell {
+	display: grid;
+	grid-template-rows: auto auto 1fr;
+	height: 100%;
+	gap: 12px;
+	padding: 12px;
+}
+
+.editor-workspace {
+	display: grid;
+	grid-template-columns: minmax(360px, var(--editor-width, 50%)) 8px minmax(360px, 1fr);
+	gap: 0;
+	min-height: 0;
+}
+
+.editor-panel {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.preview-panel {
+	min-height: 0;
+	padding: 16px;
+	overflow: auto;
+	background-color: var(--preview-bg);
+}
+
+.editor-preview-resizer {
+	width: 8px;
+	cursor: col-resize;
+	background: transparent;
+	position: relative;
+}
+
+.editor-preview-resizer::before {
+	content: '';
+	position: absolute;
+	left: 3px;
+	top: 0;
+	width: 2px;
+	height: 100%;
+	background: var(--border-color);
+	transition: background-color 0.2s ease;
+}
+
+.editor-preview-resizer:hover::before {
+	background: var(--brand-primary);
+}
+
+@include bp.down(md) {
+	.app-shell {
+		height: auto;
+		min-height: 100vh;
+	}
+
+	.editor-workspace {
+		grid-template-columns: 1fr;
+		grid-template-rows: minmax(500px, 60vh) auto;
+		overflow: visible;
+	}
+
+	.editor-preview-resizer {
+		display: none;
+	}
+}

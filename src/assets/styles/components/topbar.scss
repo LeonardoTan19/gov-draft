@@ -1,3 +1,5 @@
+@use '../utilities/breakpoints' as bp;
+
 .topbar {
   display: flex;
   align-items: center;
@@ -58,7 +60,14 @@
   transform: translateY(0);
 }
 
-@media (max-width: 768px) {
+@include bp.down(lg) {
+  .rule-tooltip__content {
+    left: 0;
+    right: auto;
+  }
+}
+
+@include bp.down(sm) {
   .topbar {
     padding: 12px 14px;
   }

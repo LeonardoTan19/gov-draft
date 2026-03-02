@@ -8,6 +8,15 @@ const PARAGRAPH_LINES_PATTERN = /^(-?\d+(\.\d+)?)lines$/;
 
 type ContentLevel = 'body' | 'h1' | 'h2' | 'h3' | 'h4';
 
+type PageSize = 'A4' | 'A3' | 'Letter';
+type PageOrientation = 'portrait' | 'landscape';
+
+const PAGE_SIZE_DIMENSIONS: Record<PageSize, { width: string; height: string }> = {
+  A4: { width: '210mm', height: '297mm' },
+  A3: { width: '297mm', height: '420mm' },
+  Letter: { width: '215.9mm', height: '279.4mm' }
+};
+
 export function compileRule(ruleConfig: RuleConfig): CompiledRule {
   const tokens = generateRuleTokens(ruleConfig);
   const rules = generateRuleStyleNodes(ruleConfig, tokens);
@@ -85,8 +94,21 @@ function buildContentFontPath(level: ContentLevel, suffix: string): string {
   return `content.${level}.fonts.${suffix}`;
 }
 
+function resolvePageDimensions(size: PageSize, orientation: PageOrientation): { width: string; height: string } {
+  const base = PAGE_SIZE_DIMENSIONS[size];
+  if (orientation === 'landscape') {
+    return {
+      width: base.height,
+      height: base.width
+    };
+  }
+
+  return base;
+}
+
 function generateRuleTokens(config: RuleConfig): Record<string, string> {
   const tokens: Record<string, string> = {};
+  const pageDimensions = resolvePageDimensions(config.page.size, config.page.orientation);
 
   const levels: ContentLevel[] = ['body', 'h1', 'h2', 'h3', 'h4'];
   levels.forEach((level) => {
@@ -114,6 +136,8 @@ function generateRuleTokens(config: RuleConfig): Record<string, string> {
   setToken(tokens, 'page.margins.right', config.page.margins.right);
   setToken(tokens, 'page.margins.bottom', config.page.margins.bottom);
   setToken(tokens, 'page.margins.left', config.page.margins.left);
+  setToken(tokens, 'page.dimension.width', pageDimensions.width);
+  setToken(tokens, 'page.dimension.height', pageDimensions.height);
 
   return tokens;
 }
@@ -307,8 +331,29 @@ function generateRuleStyleNodes(config: RuleConfig, tokens: Record<string, strin
     atRule('media', {
       prelude: 'print',
       children: [
+        styleRule(['html', 'body', '#app', '.app-shell'], [declaration('height', 'auto'), declaration('background', '#fff')]),
         styleRule(['body'], [declaration('margin', '0'), declaration('padding', '0')]),
         styleRule(['.export-document'], [declaration('max-width', '100%')]),
+        styleRule(['.paper-sheet'], [
+          declaration('width', `var(${toCssCustomProperty('page.dimension.width')})`),
+          declaration('height', `var(${toCssCustomProperty('page.dimension.height')})`),
+          declaration('min-height', `var(${toCssCustomProperty('page.dimension.height')})`),
+          declaration('margin', '0 auto'),
+          declaration(
+            'padding',
+            `var(${toCssCustomProperty('page.margins.top')}) var(${toCssCustomProperty('page.margins.right')}) var(${toCssCustomProperty('page.margins.bottom')}) var(${toCssCustomProperty('page.margins.left')})`
+          ),
+          declaration('box-shadow', 'none'),
+          declaration('border-radius', '0'),
+          declaration('break-after', 'page'),
+          declaration('page-break-after', 'always')
+        ]),
+        styleRule(['.paper-sheet:last-child'], [declaration('break-after', 'auto'), declaration('page-break-after', 'auto')]),
+        styleRule(['.preview-content'], [
+          declaration('color', '#000'),
+          declaration('background', '#fff'),
+          declaration('break-inside', 'auto')
+        ]),
         atRule('page', {
           declarations: [
             declaration('size', `${sanitizeCssValue(config.page.size)} ${sanitizeCssValue(config.page.orientation)}`),

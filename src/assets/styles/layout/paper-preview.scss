@@ -1,6 +1,4 @@
-.preview-panel {
-	min-height: 0;
-}
+@use '../utilities/breakpoints' as bp;
 
 .paper-stage {
 	flex: 1;
@@ -36,9 +34,9 @@
 }
 
 .paper-sheet {
-	width: 210mm;
-	height: 297mm;
-	min-height: 297mm;
+	width: var(--page-dimension-width, 210mm);
+	height: var(--page-dimension-height, 297mm);
+	min-height: var(--page-dimension-height, 297mm);
 	margin: 0 auto;
 	padding: var(--page-margin-top, 37mm) var(--page-margin-right, 26mm)
 		var(--page-margin-bottom, 35mm) var(--page-margin-left, 28mm);
@@ -104,3 +102,8 @@
 	cursor: grabbing;
 }
 
+@include bp.down(lg) {
+	.paper-stage {
+		min-height: 62vh;
+	}
+}

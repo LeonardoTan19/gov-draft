@@ -1,3 +1,5 @@
+@use '../utilities/breakpoints' as bp;
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -117,7 +119,7 @@
   color: var(--brand-secondary);
 }
 
-@media (max-width: 768px) {
+@include bp.down(sm) {
   .toolbar {
     padding: 6px;
   }
