@@ -50,9 +50,13 @@ export interface ContentItemConfig {
   paragraph: ParagraphConfig;
 }
 
+export interface H1ContentItemConfig extends ContentItemConfig {
+  sectionStyle?: string;
+}
+
 export interface ContentConfig {
   body: ContentItemConfig;
-  h1: ContentItemConfig;
+  h1: H1ContentItemConfig;
   h2: ContentItemConfig;
   h3: ContentItemConfig;
   h4: ContentItemConfig;

@@ -94,34 +94,45 @@ describe('validateRule', () => {
 
   it('returns invalid when pagination format contains illegal expression', () => {
     const invalidRule = createValidRule()
-    const section1 = invalidRule.paginationSections?.section1
-    if (!section1) {
-      throw new Error('section1 分页配置缺失')
+    const section = invalidRule.paginationSections?.section
+    if (!section) {
+      throw new Error('section 分页配置缺失')
     }
 
-    section1.pagination.format = '第{currentPage+alert(1)}页'
+    section.pagination.format = '第{currentPage+alert(1)}页'
 
     const result = validateRule(invalidRule)
     expect(result.valid).toBe(false)
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        'paginationSections.section1.pagination.format: 表达式非法: {currentPage+alert(1)}'
+        'paginationSections.section.pagination.format: 表达式非法: {currentPage+alert(1)}'
       ])
     )
   })
 
   it('returns invalid when pagination numberStyle is unknown', () => {
     const invalidRule = createValidRule()
-    const section1 = invalidRule.paginationSections?.section1
-    if (!section1) {
-      throw new Error('section1 分页配置缺失')
+    const section = invalidRule.paginationSections?.section
+    if (!section) {
+      throw new Error('section 分页配置缺失')
     }
 
-    section1.pagination.numberStyle = 'foobar' as 'arabic'
+    section.pagination.numberStyle = 'foobar' as 'arabic'
     const result = validateRule(invalidRule)
     expect(result.valid).toBe(false)
     expect(result.errors).toContain(
-      'paginationSections.section1.pagination.numberStyle: 必须是 arabic/roman/zhHans/zhHant 之一'
+      'paginationSections.section.pagination.numberStyle: 必须是 arabic/roman/zhHans/zhHant 之一'
+    )
+  })
+
+  it('returns invalid when content.h1.sectionStyle is malformed', () => {
+    const invalidRule = createValidRule()
+    invalidRule.content.h1.sectionStyle = 'custom-style'
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain(
+      'content.h1.sectionStyle: 必须是 section 或 section + 数字（如 section2）'
     )
   })
 

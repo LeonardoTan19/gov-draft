@@ -39,7 +39,7 @@ const getPageMetaByIndex = (index: number): PageRenderMeta => {
 
   return {
     sectionIndex: 1,
-    sectionKey: 'section1',
+    sectionKey: 'section',
     sectionPage: index + 1,
     sectionTotal: pages.value.length,
     globalPage: index + 1,

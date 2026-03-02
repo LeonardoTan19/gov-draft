@@ -1,6 +1,25 @@
-section1:
+section:
   pagination:
     format: '— {currentPage} / {totalPage} —'
+    numberStyle: arabic
+    style:
+      fonts:
+        latinFamily: Times New Roman, serif
+        cjkFamily: 仿宋_GB2312, FangSong, STFangsong, serif
+      size: 14pt
+      weight: 400
+      colors:
+        text: '#000000'
+    position:
+      vertical:
+        anchor: bottom
+        offset: 7mm
+      horizontal:
+        anchor: center
+        offset: 0mm
+section1:
+  pagination:
+    format: '— {currentPage} —'
     numberStyle: arabic
     style:
       fonts:

@@ -67,16 +67,14 @@ export interface PageRenderMeta {
 }
 
 function resolveSectionPaginationConfig(
-  sectionIndex: number,
+  sectionKey: string,
   paginationSections: PaginationSectionsConfig | undefined
 ): PaginationConfig | null {
   if (!paginationSections) {
     return null
   }
 
-  const directKey = `section${sectionIndex}`
-  const fallbackKey = 'section1'
-  const sectionConfig = paginationSections[directKey] ?? paginationSections[fallbackKey]
+  const sectionConfig = paginationSections[sectionKey]
   if (!sectionConfig?.pagination) {
     return null
   }
@@ -88,9 +86,20 @@ function resolveSectionPaginationConfig(
   return sectionConfig.pagination
 }
 
+function resolveH1SectionStyle(rule: RuleConfig | null): string {
+  const sectionStyle = rule?.content.h1.sectionStyle
+  if (typeof sectionStyle !== 'string') {
+    return 'section'
+  }
+
+  const normalizedSectionStyle = sectionStyle.trim()
+  return normalizedSectionStyle.length > 0 ? normalizedSectionStyle : 'section'
+}
+
 function buildPageMeta(
   entries: RawPageEntry[],
-  paginationSections: PaginationSectionsConfig | undefined
+  paginationSections: PaginationSectionsConfig | undefined,
+  sectionKey: string
 ): PageRenderMeta[] {
   const sectionTotalMap = entries.reduce<Record<number, number>>((acc, entry) => {
     acc[entry.sectionIndex] = (acc[entry.sectionIndex] ?? 0) + 1
@@ -106,12 +115,12 @@ function buildPageMeta(
 
     return {
       sectionIndex: entry.sectionIndex,
-      sectionKey: `section${entry.sectionIndex}`,
+      sectionKey,
       sectionPage: nextSectionPage,
       sectionTotal: sectionTotalMap[entry.sectionIndex] ?? 1,
       globalPage: index + 1,
       globalTotal,
-      pagination: resolveSectionPaginationConfig(entry.sectionIndex, paginationSections)
+      pagination: resolveSectionPaginationConfig(sectionKey, paginationSections)
     }
   })
 }
@@ -147,6 +156,7 @@ export function usePaginator() {
     isPaginating.value = true
 
     try {
+      const sectionKey = resolveH1SectionStyle(ruleStore.currentRule)
       const pageHeight = getPageHeight()
       measureContent.style.height = `${pageHeight}px`
 
@@ -156,12 +166,12 @@ export function usePaginator() {
         pageMetas.value = [
           {
             sectionIndex: 1,
-            sectionKey: 'section1',
+            sectionKey,
             sectionPage: 1,
             sectionTotal: 1,
             globalPage: 1,
             globalTotal: 1,
-            pagination: resolveSectionPaginationConfig(1, ruleStore.currentRule?.paginationSections)
+            pagination: resolveSectionPaginationConfig(sectionKey, ruleStore.currentRule?.paginationSections)
           }
         ]
         pageCount.value = 1
@@ -213,16 +223,16 @@ export function usePaginator() {
 
       pages.value = result.length > 0 ? result : ['']
       pageMetas.value = entries.length > 0
-        ? buildPageMeta(entries, ruleStore.currentRule?.paginationSections)
+        ? buildPageMeta(entries, ruleStore.currentRule?.paginationSections, sectionKey)
         : [
             {
               sectionIndex: 1,
-              sectionKey: 'section1',
+              sectionKey,
               sectionPage: 1,
               sectionTotal: 1,
               globalPage: 1,
               globalTotal: 1,
-              pagination: resolveSectionPaginationConfig(1, ruleStore.currentRule?.paginationSections)
+              pagination: resolveSectionPaginationConfig(sectionKey, ruleStore.currentRule?.paginationSections)
             }
           ]
       pageCount.value = pages.value.length

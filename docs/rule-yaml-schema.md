@@ -11,7 +11,7 @@ version: string
 description: string
 content:
   body: ContentItem
-  h1: ContentItem
+  h1: H1ContentItem
   h2: ContentItem
   h3: ContentItem
   h4: ContentItem
@@ -62,6 +62,12 @@ paragraph:
     lineHeight: CssLineHeight
     before: CssParagraphSpacing
     after: CssParagraphSpacing
+```
+
+`H1ContentItem` 在 `ContentItem` 基础上额外支持：
+
+```yaml
+sectionStyle: string            # 可选，页码 section 匹配键；默认 section
 ```
 
 ## 3. CSS 变量命名规则（自动生成）
@@ -120,7 +126,7 @@ paragraph:
 页码是否启用由主规则中的 `page.pagination.enabled` 控制；页码详细设置放在独立 YAML（内置为 `src/core/builtin-rules/gb-t-9704-pagination.yaml`），支持多 section：
 
 ```yaml
-section1:
+section:
   pagination:
     format: '— {currentPage} / {totalPage} —'
     numberStyle: arabic
@@ -142,7 +148,8 @@ section1:
 ```
 
 说明：
-- section 键名格式为 `section1`、`section2`...；编辑器按 `h1` 自动切分 section。
+- section 键名格式为 `section` 或 `section1`、`section2`...。
+- 页码配置优先使用 `content.h1.sectionStyle` 进行匹配；未指定时默认匹配 `section`。
 - `format` 支持变量：`{currentPage}`、`{CurrentPage}`、`{totalPage}`、`{TotalPage}`。
 - `{}` 内支持简单四则运算，例如 `{currentPage-1}`、`{CurrentPage/TotalPage}`。
 - `numberStyle` 支持 `arabic | roman | zhHans | zhHant`，用于变量/表达式结果的数字显示风格。

@@ -15,6 +15,7 @@ const PAGINATION_VERTICAL_ANCHOR_SET = new Set(['top', 'bottom']);
 const PAGINATION_HORIZONTAL_ANCHOR_SET = new Set(['left', 'center', 'right', 'outside', 'inside']);
 const PAGINATION_NUMBER_STYLE_SET = new Set(['arabic', 'roman', 'zhHans', 'zhHant']);
 const PAGINATION_EXPRESSION_ALLOWED_PATTERN = /^[0-9()+\-*/.\sA-Za-z_]+$/;
+const PAGINATION_SECTION_KEY_PATTERN = /^section(\d+)?$/;
 
 type AnyRecord = Record<string, unknown>;
 
@@ -195,9 +196,25 @@ function validateContent(content: unknown, issues: ValidationIssue[]): void {
 
   validateContentItem(content.body, 'content.body', issues);
   validateContentItem(content.h1, 'content.h1', issues);
+  validateH1SectionStyle(content.h1, issues);
   validateContentItem(content.h2, 'content.h2', issues);
   validateContentItem(content.h3, 'content.h3', issues);
   validateContentItem(content.h4, 'content.h4', issues);
+}
+
+function validateH1SectionStyle(h1: unknown, issues: ValidationIssue[]): void {
+  if (!isObject(h1) || h1.sectionStyle === undefined) {
+    return;
+  }
+
+  if (typeof h1.sectionStyle !== 'string' || h1.sectionStyle.trim().length === 0) {
+    pushError(issues, 'content.h1.sectionStyle', '必须是非空字符串');
+    return;
+  }
+
+  if (!PAGINATION_SECTION_KEY_PATTERN.test(h1.sectionStyle.trim())) {
+    pushError(issues, 'content.h1.sectionStyle', '必须是 section 或 section + 数字（如 section2）');
+  }
 }
 
 function validatePage(page: unknown, issues: ValidationIssue[]): void {
@@ -262,8 +279,8 @@ function validatePaginationSections(page: unknown, paginationSections: unknown, 
   }
 
   sectionEntries.forEach(([sectionKey, sectionValue]) => {
-    if (!/^section\d+$/.test(sectionKey)) {
-      pushError(issues, `paginationSections.${sectionKey}`, 'section 键名必须是 section + 数字（如 section1）');
+    if (!PAGINATION_SECTION_KEY_PATTERN.test(sectionKey)) {
+      pushError(issues, `paginationSections.${sectionKey}`, 'section 键名必须是 section 或 section + 数字（如 section2）');
       return;
     }
 

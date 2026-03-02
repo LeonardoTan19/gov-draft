@@ -22,6 +22,7 @@ content:
         before: 0lines
         after: 0lines
   h1:
+    sectionStyle: section
     fonts:
       latinFamily: Times New Roman, serif
       cjkFamily: 方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif
