@@ -1,9 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { sanitizeCssValue } from '../core/utils/css-sanitize-utils'
 import { ruleEngine } from '../core/rule-engine/rule-engine'
 import type { CompiledRule, RuleConfig } from '../types/rule'
 
-const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g
+const RESERVED_CUSTOM_STYLE_KEYS = new Set([
+  '--page-margins-top',
+  '--page-margins-right',
+  '--page-margins-bottom',
+  '--page-margins-left'
+])
 
 export const useRuleStore = defineStore('rule', () => {
   const currentRule = ref<RuleConfig | null>(null)
@@ -29,6 +35,14 @@ export const useRuleStore = defineStore('rule', () => {
   }
 
   function setCustomStyle(key: string, value: string): void {
+    const normalizedKey = key.startsWith('--') ? key : `--${key}`
+    if (RESERVED_CUSTOM_STYLE_KEYS.has(normalizedKey)) {
+      delete customStyles.value[key]
+      delete customStyles.value[normalizedKey]
+      saveCustomStylesToStorage()
+      return
+    }
+
     customStyles.value[key] = value
     saveCustomStylesToStorage()
   }
@@ -78,7 +92,13 @@ export const useRuleStore = defineStore('rule', () => {
 
       const savedCustomStyles = localStorage.getItem('gov-draft-custom-styles')
       if (savedCustomStyles) {
-        customStyles.value = JSON.parse(savedCustomStyles)
+        const parsedStyles = JSON.parse(savedCustomStyles) as unknown
+        const rawStyles = isStringRecord(parsedStyles) ? parsedStyles : {}
+        const { styles, changed } = stripReservedCustomStyles(rawStyles)
+        customStyles.value = styles
+        if (changed) {
+          saveCustomStylesToStorage()
+        }
       }
     } catch (error) {
       console.error('Failed to initialize rule:', error)
@@ -143,9 +163,13 @@ export const useRuleStore = defineStore('rule', () => {
   function normalizeCustomStyles(input: Record<string, string>): Record<string, string> {
     return Object.entries(input).reduce<Record<string, string>>((acc, [key, value]) => {
       const normalizedKey = key.startsWith('--') ? key : `--${key}`
-      const normalizedValue = String(value ?? '').replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim()
+      const normalizedValue = sanitizeCssValue(value)
 
-      if (normalizedKey.length > 2 && normalizedValue.length > 0) {
+      if (
+        normalizedKey.length > 2 &&
+        normalizedValue.length > 0 &&
+        !RESERVED_CUSTOM_STYLE_KEYS.has(normalizedKey)
+      ) {
         acc[normalizedKey] = normalizedValue
       }
 
@@ -155,6 +179,33 @@ export const useRuleStore = defineStore('rule', () => {
 
   function isSameRule(left: RuleConfig, right: RuleConfig): boolean {
     return JSON.stringify(left) === JSON.stringify(right)
+  }
+
+  function stripReservedCustomStyles(styles: Record<string, string>): {
+    styles: Record<string, string>
+    changed: boolean
+  } {
+    let changed = false
+    const filtered = Object.entries(styles).reduce<Record<string, string>>((acc, [key, value]) => {
+      const normalizedKey = key.startsWith('--') ? key : `--${key}`
+      if (RESERVED_CUSTOM_STYLE_KEYS.has(normalizedKey)) {
+        changed = true
+        return acc
+      }
+
+      acc[key] = value
+      return acc
+    }, {})
+
+    return { styles: filtered, changed }
+  }
+
+  function isStringRecord(value: unknown): value is Record<string, string> {
+    if (!value || typeof value !== 'object') {
+      return false
+    }
+
+    return Object.values(value).every((item) => typeof item === 'string')
   }
 
   return {

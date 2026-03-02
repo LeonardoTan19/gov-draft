@@ -1,21 +1,12 @@
 import type { AtRule, CompiledRule, RuleConfig, StyleDeclaration, StyleNode, StyleRule } from '../../types/rule';
 import { scopeSelectors } from './css-scope';
 import { toCssCustomProperty } from './css-variable';
+import { sanitizeCssProperty, sanitizeCssValue } from '../utils/css-sanitize-utils';
+import { resolvePageDimensions } from '../utils/page-metrics-utils';
 
-const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
-const CSS_PROPERTY_UNSAFE_CHARS = /[{};:\n\r]/g;
 const PARAGRAPH_LINES_PATTERN = /^(-?\d+(\.\d+)?)lines$/;
 
 type ContentLevel = 'body' | 'h1' | 'h2' | 'h3' | 'h4';
-
-type PageSize = 'A4' | 'A3' | 'Letter';
-type PageOrientation = 'portrait' | 'landscape';
-
-const PAGE_SIZE_DIMENSIONS: Record<PageSize, { width: string; height: string }> = {
-  A4: { width: '210mm', height: '297mm' },
-  A3: { width: '297mm', height: '420mm' },
-  Letter: { width: '215.9mm', height: '279.4mm' }
-};
 
 export function compileRule(ruleConfig: RuleConfig): CompiledRule {
   const tokens = generateRuleTokens(ruleConfig);
@@ -27,18 +18,6 @@ export function compileRule(ruleConfig: RuleConfig): CompiledRule {
     rules,
     cssText
   };
-}
-
-function sanitizeCssValue(value: unknown): string {
-  return String(value ?? '')
-    .replace(CSS_VALUE_UNSAFE_CHARS, ' ')
-    .trim();
-}
-
-function sanitizeCssProperty(value: string): string {
-  return value
-    .replace(CSS_PROPERTY_UNSAFE_CHARS, '')
-    .trim();
 }
 
 function declaration(property: string, value: unknown): StyleDeclaration {
@@ -92,18 +71,6 @@ function buildFontFamilyValue(primaryPath: string, fallbackPath: string): string
 
 function buildContentFontPath(level: ContentLevel, suffix: string): string {
   return `content.${level}.fonts.${suffix}`;
-}
-
-function resolvePageDimensions(size: PageSize, orientation: PageOrientation): { width: string; height: string } {
-  const base = PAGE_SIZE_DIMENSIONS[size];
-  if (orientation === 'landscape') {
-    return {
-      width: base.height,
-      height: base.width
-    };
-  }
-
-  return base;
 }
 
 function generateRuleTokens(config: RuleConfig): Record<string, string> {

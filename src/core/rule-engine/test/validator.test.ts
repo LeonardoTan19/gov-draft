@@ -124,4 +124,15 @@ describe('validateRule', () => {
       'paginationSections.section1.pagination.numberStyle: 必须是 arabic/roman/zhHans/zhHant 之一'
     )
   })
+
+  it('returns invalid when page margins are not convertible to px', () => {
+    const invalidRule = createValidRule()
+    invalidRule.page.margins.top = '2em' as '37mm'
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain(
+      'page.margins.top: 必须是可换算为像素的长度值（仅支持 mm/cm/in/pt/px/0）'
+    )
+  })
 })

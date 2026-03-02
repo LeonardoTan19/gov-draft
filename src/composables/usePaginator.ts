@@ -5,23 +5,18 @@
  */
 
 import { nextTick, ref } from 'vue'
-import type { CssLength, PaginationConfig, PaginationSectionsConfig } from '../types/rule'
+import type { PaginationConfig, PaginationSectionsConfig, RuleConfig } from '../types/rule'
+import { getPageContentHeightPx } from '../core/utils/page-metrics-utils'
 import { useRuleStore } from '../stores/rule'
 
-const PX_PER_MM = 96 / 25.4
-
-function cssLengthToPx(value: CssLength): number {
-  if (value === 0 || value === '0') return 0
-  const match = String(value).match(/^(-?[\d.]+)(mm|cm|in|pt|px)$/)
-  if (!match) return 0
-  const num = parseFloat(match[1] ?? '0')
-  switch (match[2]) {
-    case 'mm': return num * PX_PER_MM
-    case 'cm': return num * PX_PER_MM * 10
-    case 'in': return num * 96
-    case 'pt': return num * (96 / 72)
-    case 'px': return num
-    default:   return 0
+const DEFAULT_PAGE_CONFIG: RuleConfig['page'] = {
+  size: 'A4',
+  orientation: 'portrait',
+  margins: {
+    top: '37mm',
+    right: '26mm',
+    bottom: '35mm',
+    left: '28mm'
   }
 }
 
@@ -281,11 +276,8 @@ export function usePaginator() {
    * @returns 页面内容区高度（像素）
    */
   const getPageHeight = (): number => {
-    const pageHeightPx = 297 * PX_PER_MM
-    const margins = ruleStore.currentRule?.page.margins
-    const topPx    = margins ? cssLengthToPx(margins.top)    : 37 * PX_PER_MM
-    const bottomPx = margins ? cssLengthToPx(margins.bottom) : 35 * PX_PER_MM
-    return pageHeightPx - topPx - bottomPx
+    const pageConfig = ruleStore.currentRule?.page ?? DEFAULT_PAGE_CONFIG
+    return getPageContentHeightPx(pageConfig)
   }
 
   const scrollToPage = (page: number): void => {

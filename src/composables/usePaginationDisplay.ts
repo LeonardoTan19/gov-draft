@@ -1,9 +1,9 @@
 import type { PageRenderMeta } from './usePaginator'
 import type { CssLength, PaginationConfig } from '../types/rule'
 import { NumberFormatUtils } from '../core/utils/number-format-utils'
+import { evaluateNumericTemplateExpression } from '../core/utils/template-expression-utils'
 
 const PAGINATION_EXPRESSION_PATTERN = /\{([^{}]+)\}/g
-const PAGINATION_EXPR_ALLOWED_PATTERN = /^[0-9()+\-*/.\sA-Za-z_]+$/
 
 const formatPaginationNumber = (value: number, config: PaginationConfig | null): string => {
   const style = config?.numberStyle ?? 'arabic'
@@ -23,31 +23,12 @@ const evaluatePaginationExpression = (
   context: Record<'currentPage' | 'CurrentPage' | 'totalPage' | 'TotalPage', number>,
   config: PaginationConfig | null
 ): string => {
-  const trimmedExpression = expression.trim()
-  if (trimmedExpression.length === 0 || !PAGINATION_EXPR_ALLOWED_PATTERN.test(trimmedExpression)) {
+  const evaluated = evaluateNumericTemplateExpression(expression, context)
+  if (evaluated === null) {
     return ''
   }
 
-  const normalizedExpression = trimmedExpression
-    .replace(/\bcurrentPage\b/g, String(context.currentPage))
-    .replace(/\bCurrentPage\b/g, String(context.CurrentPage))
-    .replace(/\btotalPage\b/g, String(context.totalPage))
-    .replace(/\bTotalPage\b/g, String(context.TotalPage))
-
-  if (/[A-Za-z_]/.test(normalizedExpression)) {
-    return ''
-  }
-
-  try {
-    const value = Function(`"use strict"; return (${normalizedExpression});`)()
-    if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) {
-      return ''
-    }
-
-    return formatPaginationNumber(value, config)
-  } catch {
-    return ''
-  }
+  return formatPaginationNumber(evaluated, config)
 }
 
 const clampToMargin = (offset: CssLength, marginVar: string): string => `min(${offset}, var(${marginVar}))`

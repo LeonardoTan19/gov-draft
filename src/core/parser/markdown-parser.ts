@@ -2,16 +2,14 @@ import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import type { HeadingLevel, ParserConfig } from '../../types/rule';
 import { toCssCustomProperty } from '../rule-engine/css-variable';
+import { sanitizeCssValue } from '../utils/css-sanitize-utils';
+import { resolveCanonicalLocalStylePath } from '../utils/local-style-path-utils';
 import { NumberFormatUtils } from '../utils/number-format-utils';
 
 export type MarkdownOptions = ParserConfig;
 
 type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
 
-const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
-const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
-const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
-const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
 const HEADING_INDEX_DISABLED_VALUE = '0lines';
 const MANUAL_BREAK_SUFFIX_PATTERN = /\s*\/\/\s*$/;
@@ -215,7 +213,7 @@ export class MarkdownParser {
   }
 
   private normalizeLocalStyleValue(rawValue: string): string {
-    const sanitizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
+    const sanitizedValue = sanitizeCssValue(rawValue);
     if (!sanitizedValue) {
       return '';
     }
@@ -231,34 +229,7 @@ export class MarkdownParser {
   }
 
   private resolveLocalStyleTargetPath(key: string): string | null {
-    const normalizedKey = key.trim();
-
-    if (this.isOverridablePath(normalizedKey)) {
-      return normalizedKey;
-    }
-
-    if (normalizedKey.includes('.')) {
-      const canonicalPath = `${LOCAL_STYLE_SCOPE_PREFIX}${normalizedKey}`;
-      if (this.isOverridablePath(canonicalPath)) {
-        return canonicalPath;
-      }
-    }
-
-    return null;
-  }
-
-  private isOverridablePath(path: string): boolean {
-    if (!path.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
-      return false;
-    }
-
-    if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(path)) {
-      return false;
-    }
-
-    return !path
-      .split('.')
-      .some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
+    return resolveCanonicalLocalStylePath(key);
   }
 
   private registerTextFontScopes(parser: MarkdownIt): void {

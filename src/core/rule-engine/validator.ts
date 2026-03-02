@@ -1,4 +1,7 @@
 import type { ValidationIssue, ValidationResult } from '../../types/rule';
+import { canConvertCssLengthToPx } from '../utils/page-metrics-utils';
+import { evaluateNumericTemplateExpression } from '../utils/template-expression-utils';
+import { validateLocalStyleTargetPath } from '../utils/local-style-path-utils';
 
 const CSS_LENGTH_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
 const CSS_LINE_HEIGHT_PATTERN = /^-?\d+(\.\d+)?$|^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
@@ -12,9 +15,6 @@ const PAGINATION_VERTICAL_ANCHOR_SET = new Set(['top', 'bottom']);
 const PAGINATION_HORIZONTAL_ANCHOR_SET = new Set(['left', 'center', 'right', 'outside', 'inside']);
 const PAGINATION_NUMBER_STYLE_SET = new Set(['arabic', 'roman', 'zhHans', 'zhHant']);
 const PAGINATION_EXPRESSION_ALLOWED_PATTERN = /^[0-9()+\-*/.\sA-Za-z_]+$/;
-const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
-const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
-const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -226,6 +226,13 @@ function validatePage(page: unknown, issues: ValidationIssue[]): void {
   validateCssLength(page.margins.bottom, 'page.margins.bottom', issues);
   validateCssLength(page.margins.left, 'page.margins.left', issues);
 
+  if (isObject(page.margins)) {
+    validateConvertiblePageMargin(page.margins.top, 'page.margins.top', issues);
+    validateConvertiblePageMargin(page.margins.right, 'page.margins.right', issues);
+    validateConvertiblePageMargin(page.margins.bottom, 'page.margins.bottom', issues);
+    validateConvertiblePageMargin(page.margins.left, 'page.margins.left', issues);
+  }
+
   if (page.pagination !== undefined) {
     if (!isObject(page.pagination)) {
       pushError(issues, 'page.pagination', '必须是对象');
@@ -369,12 +376,20 @@ function isValidPaginationExpression(expression: string): boolean {
     return false;
   }
 
-  const replaced = expression.replace(/\b(currentPage|CurrentPage|totalPage|TotalPage)\b/g, '1');
-  if (/[A-Za-z_]/.test(replaced)) {
-    return false;
-  }
+  return (
+    evaluateNumericTemplateExpression(expression, {
+      currentPage: 1,
+      CurrentPage: 1,
+      totalPage: 1,
+      TotalPage: 1
+    }) !== null
+  );
+}
 
-  return /^[0-9()+\-*/.\s]+$/.test(replaced);
+function validateConvertiblePageMargin(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (!canConvertCssLengthToPx(value)) {
+    pushError(issues, path, '必须是可换算为像素的长度值（仅支持 mm/cm/in/pt/px/0）');
+  }
 }
 
 function validateParser(parser: unknown, issues: ValidationIssue[]): void {
@@ -424,18 +439,19 @@ function validateParser(parser: unknown, issues: ValidationIssue[]): void {
         }
 
         const normalizedTarget = target.trim();
-        if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(normalizedTarget)) {
+        const pathValidation = validateLocalStyleTargetPath(normalizedTarget);
+
+        if (!pathValidation.formatValid) {
           pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径格式非法（需为点分层级路径）');
           return;
         }
 
-        if (!normalizedTarget.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
+        if (!pathValidation.inScope) {
           pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径必须在 content.* 范围内');
           return;
         }
 
-        const hasUnsafeSegment = normalizedTarget.split('.').some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
-        if (hasUnsafeSegment) {
+        if (!pathValidation.safe) {
           pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径包含不安全字段');
         }
       });
