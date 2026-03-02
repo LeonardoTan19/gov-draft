@@ -148,39 +148,134 @@ export const editorTheme = EditorView.theme({
   '.cm-sugar-depth-5': { color: '#f43f5e' },
   '.cm-color-preview': {
     display: 'inline-flex',
-    position: 'relative',
     marginRight: '4px',
     verticalAlign: 'middle'
   },
   '.cm-color-swatch': {
-    width: '10px',
-    height: '10px',
+    width: '11px',
+    height: '11px',
     borderRadius: '2px',
-    border: '1px solid #94a3b8',
+    border: '1px solid #00000066',
     padding: '0',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    boxShadow: 'inset 0 0 0 1px #ffffff66'
   },
   '.cm-color-picker-panel': {
-    display: 'none',
     position: 'absolute',
-    top: 'calc(100% + 6px)',
-    left: '0',
-    background: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderRadius: '8px',
-    padding: '4px',
-    zIndex: '30',
-    boxShadow: '0 6px 16px #0f172a26'
+    width: '220px',
+    background: '#252526',
+    border: '1px solid #3c3c3c',
+    borderRadius: '6px',
+    padding: '10px',
+    zIndex: '40',
+    boxShadow: '0 6px 20px #00000066',
+    display: 'none',
+    flexDirection: 'column',
+    gap: '8px'
   },
-  '.cm-color-preview:hover .cm-color-picker-panel, .cm-color-preview:focus-within .cm-color-picker-panel': {
-    display: 'inline-flex'
+  '.cm-color-picker-panel.cm-color-picker-panel-open': {
+    display: 'flex'
   },
-  '.cm-color-picker-input': {
-    width: '24px',
-    height: '24px',
-    border: '0',
+  '.cm-color-picker-panel.cm-color-picker-panel-hidden': {
+    display: 'none'
+  },
+  '.cm-color-panel-preview': {
+    width: '100%',
+    height: '20px',
+    borderRadius: '3px',
+    border: '1px solid #00000080',
+    backgroundImage:
+      'linear-gradient(45deg, #3c3c3c 25%, transparent 25%), linear-gradient(-45deg, #3c3c3c 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #3c3c3c 75%), linear-gradient(-45deg, transparent 75%, #3c3c3c 75%)',
+    backgroundSize: '10px 10px',
+    backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px'
+  },
+  '.cm-color-panel-sat': {
+    position: 'relative',
+    width: '100%',
+    height: '120px',
+    borderRadius: '3px',
+    border: '1px solid #00000080',
+    cursor: 'crosshair',
+    backgroundImage:
+      'linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent)'
+  },
+  '.cm-color-panel-cursor': {
+    position: 'absolute',
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    border: '1px solid #ffffff',
+    boxShadow: '0 0 0 1px #00000066',
+    transform: 'translate(-50%, -50%)',
+    pointerEvents: 'none'
+  },
+  '.cm-color-panel-range': {
+    width: '100%',
+    margin: '0',
+    height: '16px',
+    appearance: 'none',
     background: 'transparent',
-    padding: '0',
     cursor: 'pointer'
+  },
+  '.cm-color-panel-hue': {
+    background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+    borderRadius: '999px'
+  },
+  '.cm-color-panel-alpha': {
+    borderRadius: '999px'
+  },
+  '.cm-color-panel-range::-webkit-slider-runnable-track': {
+    height: '8px',
+    borderRadius: '999px',
+    border: '1px solid #00000099'
+  },
+  '.cm-color-panel-hue::-webkit-slider-runnable-track': {
+    background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
+  },
+  '.cm-color-panel-alpha::-webkit-slider-runnable-track': {
+    background: 'var(--cm-color-alpha-track, linear-gradient(90deg, transparent, #ffffff))'
+  },
+  '.cm-color-panel-range::-webkit-slider-thumb': {
+    appearance: 'none',
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    border: '1px solid #000000cc',
+    background: '#f5f5f5',
+    marginTop: '-3px',
+    boxShadow: '0 0 0 1px #ffffff66'
+  },
+  '.cm-color-panel-range::-moz-range-track': {
+    height: '8px',
+    borderRadius: '999px',
+    border: '1px solid #00000099'
+  },
+  '.cm-color-panel-hue::-moz-range-track': {
+    background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
+  },
+  '.cm-color-panel-alpha::-moz-range-track': {
+    background: 'var(--cm-color-alpha-track, linear-gradient(90deg, transparent, #ffffff))'
+  },
+  '.cm-color-panel-range::-moz-range-thumb': {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    border: '1px solid #000000cc',
+    background: '#f5f5f5',
+    boxShadow: '0 0 0 1px #ffffff66'
+  },
+  '.cm-color-panel-text': {
+    width: '100%',
+    height: '28px',
+    border: '1px solid #3c3c3c',
+    borderRadius: '3px',
+    background: '#1e1e1e',
+    color: '#cccccc',
+    padding: '0 8px',
+    fontSize: '12px',
+    outline: 'none'
+  },
+  '.cm-color-panel-text:focus': {
+    borderColor: '#007acc'
   }
 });

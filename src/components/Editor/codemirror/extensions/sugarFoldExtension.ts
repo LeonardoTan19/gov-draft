@@ -1,5 +1,6 @@
 import { StateEffect, StateField, type EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
+import { getLockedSugarLine } from './sugarHoverLock';
 
 const SUGAR_OPEN_PATTERN = /^\s*:::\s+\S/;
 const SUGAR_CLOSE_PATTERN = /^\s*:::\s*$/;
@@ -15,7 +16,7 @@ interface SugarBlock {
   parentStartLine: number | null;
 }
 
-const setHoveredLineEffect = StateEffect.define<number | null>();
+export const setSugarHoveredLineEffect = StateEffect.define<number | null>();
 const setCursorLineEffect = StateEffect.define<number | null>();
 const SUGAR_HOVER_EXPAND_DELAY_MS = 100;
 
@@ -30,7 +31,7 @@ const sugarInteractionField = StateField.define<SugarInteractionState>({
     let nextValue = value;
 
     for (const effect of transaction.effects) {
-      if (effect.is(setHoveredLineEffect)) {
+      if (effect.is(setSugarHoveredLineEffect)) {
         nextValue = {
           ...nextValue,
           hoveredLine: effect.value
@@ -232,6 +233,34 @@ export function createSugarFoldExtension(): Extension {
   let hoverTimer: number | null = null;
   let pendingHoveredLine: number | null = null;
 
+  const clearHoverTimer = (): void => {
+    if (hoverTimer !== null) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  };
+
+  const dispatchHoveredLineIfChanged = (view: EditorView, lineNumber: number | null): void => {
+    const current = view.state.field(sugarInteractionField);
+    if (current.hoveredLine === lineNumber) {
+      return;
+    }
+    view.dispatch({
+      effects: setSugarHoveredLineEffect.of(lineNumber)
+    });
+  };
+
+  const applyLockedHoverIfPresent = (view: EditorView): boolean => {
+    const lockedLine = getLockedSugarLine(view);
+    if (lockedLine === null) {
+      return false;
+    }
+    clearHoverTimer();
+    pendingHoveredLine = null;
+    dispatchHoveredLineIfChanged(view, lockedLine);
+    return true;
+  };
+
   return [
     sugarInteractionField,
     sugarDecorations,
@@ -250,6 +279,11 @@ export function createSugarFoldExtension(): Extension {
     }),
     EditorView.domEventHandlers({
       mousemove(event, view) {
+        if (applyLockedHoverIfPresent(view)) {
+          return false;
+        }
+
+        const current = view.state.field(sugarInteractionField);
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
           return false;
@@ -259,14 +293,10 @@ export function createSugarFoldExtension(): Extension {
           return false;
         }
         const lineNumber = view.state.doc.lineAt(pos).number;
-        const current = view.state.field(sugarInteractionField);
         if (current.hoveredLine === lineNumber || pendingHoveredLine === lineNumber) {
           return false;
         }
-        if (hoverTimer !== null) {
-          clearTimeout(hoverTimer);
-          hoverTimer = null;
-        }
+        clearHoverTimer();
         pendingHoveredLine = lineNumber;
         hoverTimer = window.setTimeout(() => {
           hoverTimer = null;
@@ -275,23 +305,24 @@ export function createSugarFoldExtension(): Extension {
             return;
           }
           view.dispatch({
-            effects: setHoveredLineEffect.of(pendingHoveredLine)
+            effects: setSugarHoveredLineEffect.of(pendingHoveredLine)
           });
         }, SUGAR_HOVER_EXPAND_DELAY_MS);
         return false;
       },
       mouseleave(_event, view) {
-        if (hoverTimer !== null) {
-          clearTimeout(hoverTimer);
-          hoverTimer = null;
+        if (applyLockedHoverIfPresent(view)) {
+          return false;
         }
-        pendingHoveredLine = null;
+
         const current = view.state.field(sugarInteractionField);
+        clearHoverTimer();
+        pendingHoveredLine = null;
         if (current.hoveredLine === null) {
           return false;
         }
         view.dispatch({
-          effects: setHoveredLineEffect.of(null)
+          effects: setSugarHoveredLineEffect.of(null)
         });
         return false;
       }
