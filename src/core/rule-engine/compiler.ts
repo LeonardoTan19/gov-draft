@@ -1,4 +1,4 @@
-import type { AtRule, CompiledRule, RuleConfig, StyleDeclaration, StyleNode, StyleRule } from '../../types/rule';
+import type { AtRule, CompiledRule, ContentItemConfig, RuleConfig, StyleDeclaration, StyleNode, StyleRule } from '../../types/rule';
 import { scopeSelectors } from './css-scope';
 import { toCssCustomProperty } from './css-variable';
 import { sanitizeCssProperty, sanitizeCssValue } from '../utils/css-sanitize-utils';
@@ -73,13 +73,39 @@ function buildContentFontPath(level: ContentLevel, suffix: string): string {
   return `content.${level}.fonts.${suffix}`;
 }
 
+function isContentItemConfig(value: unknown): value is ContentItemConfig {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const style = candidate.style;
+  const paragraph = candidate.paragraph;
+
+  return (
+    !!candidate.fonts &&
+    typeof candidate.fonts === 'object' &&
+    !!style &&
+    typeof style === 'object' &&
+    !!(style as Record<string, unknown>).colors &&
+    typeof (style as Record<string, unknown>).colors === 'object' &&
+    !!paragraph &&
+    typeof paragraph === 'object' &&
+    !!(paragraph as Record<string, unknown>).spacing &&
+    typeof (paragraph as Record<string, unknown>).spacing === 'object'
+  );
+}
+
 function generateRuleTokens(config: RuleConfig): Record<string, string> {
   const tokens: Record<string, string> = {};
   const pageDimensions = resolvePageDimensions(config.page.size, config.page.orientation);
 
-  const levels: ContentLevel[] = ['body', 'h1', 'h2', 'h3', 'h4'];
-  levels.forEach((level) => {
-    const item = config.content[level];
+  Object.entries(config.content).forEach(([level, value]) => {
+    if (!isContentItemConfig(value)) {
+      return;
+    }
+
+    const item = value;
     setToken(tokens, `content.${level}.fonts.latinFamily`, item.fonts.latinFamily);
     setToken(tokens, `content.${level}.fonts.cjkFamily`, item.fonts.cjkFamily);
     setToken(tokens, `content.${level}.fonts.cnQuoteFamily`, item.fonts.cnQuoteFamily ?? item.fonts.cjkFamily);

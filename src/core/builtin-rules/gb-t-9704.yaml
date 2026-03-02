@@ -94,7 +94,7 @@ content:
       colors:
         text: '#000000'
         background: '#ffffff'
-      index: '{romanIndex}．'
+      index: '{arabicIndex}．'
     paragraph:
       align: left
       indent: 2em

@@ -75,7 +75,22 @@ describe('MarkdownParser behavior', () => {
 
     expect(html).toContain('<h2>一、汉字序号</h2>')
     expect(html).toContain('<h3>（壹）大写序号</h3>')
-    expect(html).toContain('<h4><span class="latin-text">1</span>.数字序号</h4>')
+    expect(html).toContain('<h4><span class="latin-text">I</span>.数字序号</h4>')
+  })
+
+  it('supports arabicIndex and explicit roman placeholders', () => {
+    const parser = new MarkdownParser({ headingNumbering: true, disabledSyntax: [] })
+
+    const markdown = ['## 阿拉伯', '### 罗马大写', '#### 罗马小写'].join('\n')
+    const html = parser.parse(markdown, {
+      h2: '{arabicIndex}、',
+      h3: '{romanUpperIndex}.',
+      h4: '{romanLowerIndex}.'
+    })
+
+    expect(html).toContain('<h2><span class="latin-text">1</span>、阿拉伯</h2>')
+    expect(html).toContain('<h3><span class="latin-text">I</span>.罗马大写</h3>')
+    expect(html).toContain('<h4><span class="latin-text">i</span>.罗马小写</h4>')
   })
 
   it('supports local style container with canonical path syntax', () => {
@@ -109,7 +124,7 @@ describe('MarkdownParser behavior', () => {
     expect(html).toContain('--content-body-style-colors-text: #FF0000;')
   })
 
-  it('does not support local style container with alias syntax', () => {
+  it('supports local style container with alias syntax', () => {
     const parser = new MarkdownParser({
       headingNumbering: true,
       disabledSyntax: [],
@@ -121,7 +136,30 @@ describe('MarkdownParser behavior', () => {
     const markdown = ['::: bodyIndent: 1em', '段落B', ':::'].join('\n')
     const html = parser.parse(markdown)
 
-    expect(html).not.toContain('class="local-style-container"')
+    expect(html).toContain('class="local-style-container"')
+    expect(html).toContain('--content-body-paragraph-indent: 1em;')
+  })
+
+  it('supports alias syntax with full-width colon and multi-rule descriptors', () => {
+    const parser = new MarkdownParser({
+      headingNumbering: false,
+      disabledSyntax: [],
+      localStyleAliases: {
+        bodyIndent: 'content.body.paragraph.indent',
+        bodyColor: 'content.body.style.colors.text'
+      }
+    })
+
+    const markdown = [
+      "::: bodyIndent：0em；bodyColor:'#ff0000'",
+      '别名规则段落',
+      ':::'
+    ].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('class="local-style-container"')
+    expect(html).toContain('--content-body-paragraph-indent: 0em;')
+    expect(html).toContain('--content-body-style-colors-text: #ff0000;')
   })
 
   it('does not support built-in old aliases without parser alias config', () => {

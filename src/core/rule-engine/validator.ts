@@ -194,12 +194,19 @@ function validateContent(content: unknown, issues: ValidationIssue[]): void {
     return;
   }
 
-  validateContentItem(content.body, 'content.body', issues);
-  validateContentItem(content.h1, 'content.h1', issues);
+  const requiredLevels = ['body', 'h1', 'h2', 'h3', 'h4'];
+  requiredLevels.forEach((level) => {
+    validateContentItem(content[level], `content.${level}`, issues);
+  });
   validateH1SectionStyle(content.h1, issues);
-  validateContentItem(content.h2, 'content.h2', issues);
-  validateContentItem(content.h3, 'content.h3', issues);
-  validateContentItem(content.h4, 'content.h4', issues);
+
+  Object.entries(content).forEach(([level, value]) => {
+    if (requiredLevels.includes(level)) {
+      return;
+    }
+
+    validateContentItem(value, `content.${level}`, issues);
+  });
 }
 
 function validateH1SectionStyle(h1: unknown, issues: ValidationIssue[]): void {

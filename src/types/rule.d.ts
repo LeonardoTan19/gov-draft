@@ -60,6 +60,7 @@ export interface ContentConfig {
   h2: ContentItemConfig;
   h3: ContentItemConfig;
   h4: ContentItemConfig;
+  [level: string]: ContentItemConfig | H1ContentItemConfig;
 }
 
 export interface PageConfig {

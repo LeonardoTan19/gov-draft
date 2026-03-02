@@ -8,7 +8,14 @@ import { NumberFormatUtils } from '../utils/number-format-utils';
 
 export type MarkdownOptions = ParserConfig;
 
-type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
+type NumberingPlaceholder =
+  | '{number}'
+  | '{arabicIndex}'
+  | '{zhHansIndex}'
+  | '{zhHantIndex}'
+  | '{romanIndex}'
+  | '{romanUpperIndex}'
+  | '{romanLowerIndex}';
 
 const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
 const HEADING_INDEX_DISABLED_VALUE = '0lines';
@@ -229,7 +236,22 @@ export class MarkdownParser {
   }
 
   private resolveLocalStyleTargetPath(key: string): string | null {
-    return resolveCanonicalLocalStylePath(key);
+    const directPath = resolveCanonicalLocalStylePath(key);
+    if (directPath) {
+      return directPath;
+    }
+
+    const aliasMapping = this.options.localStyleAliases ?? {};
+    if (!Object.prototype.hasOwnProperty.call(aliasMapping, key)) {
+      return null;
+    }
+
+    const aliasTarget = aliasMapping[key];
+    if (typeof aliasTarget !== 'string') {
+      return null;
+    }
+
+    return resolveCanonicalLocalStylePath(aliasTarget);
   }
 
   private registerTextFontScopes(parser: MarkdownIt): void {
@@ -403,7 +425,7 @@ export class MarkdownParser {
       return '（{zhHansIndex}）';
     }
     if (level === 'h4') {
-      return '{romanIndex}．';
+      return '{arabicIndex}．';
     }
     return '';
   }
@@ -416,9 +438,12 @@ export class MarkdownParser {
 
     const placeholderValues: Record<NumberingPlaceholder, string> = {
       '{number}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
+      '{arabicIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
       '{zhHansIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHans'),
       '{zhHantIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHant'),
-      '{romanIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman')
+      '{romanIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman'),
+      '{romanUpperIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman'),
+      '{romanLowerIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman').toLowerCase()
     };
 
     let formatted = template;

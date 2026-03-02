@@ -146,4 +146,44 @@ describe('validateRule', () => {
       'page.margins.top: 必须是可换算为像素的长度值（仅支持 mm/cm/in/pt/px/0）'
     )
   })
+
+  it('returns valid when content contains custom level with full ContentItem structure', () => {
+    const validRule = createValidRule()
+    validRule.content.appendix = JSON.parse(JSON.stringify(validRule.content.body))
+
+    const result = validateRule(validRule)
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('returns invalid when custom content level structure is malformed', () => {
+    const invalidRule = createValidRule() as unknown as Record<string, unknown>
+    const content = invalidRule.content as Record<string, unknown>
+    content.appendix = {
+      fonts: {
+        latinFamily: 'Times New Roman'
+      },
+      style: {
+        size: '16pt',
+        weight: 400,
+        colors: {
+          text: '#000000',
+          background: '#ffffff'
+        }
+      },
+      paragraph: {
+        align: 'left',
+        indent: '2em'
+      }
+    }
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        'content.appendix.fonts.cjkFamily: 必须是非空字符串',
+        'content.appendix.paragraph.spacing: 字段缺失或类型错误'
+      ])
+    )
+  })
 })

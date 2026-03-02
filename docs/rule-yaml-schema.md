@@ -104,6 +104,21 @@ sectionStyle: string            # 可选，页码 section 匹配键；默认 sec
 :::
 ```
 
+若配置 `parser.localStyleAliases`，则局部样式支持别名写法：
+
+```markdown
+::: bodyIndent: 0em
+正文
+:::
+```
+
+其中 `bodyIndent` 由 `parser.localStyleAliases.bodyIndent` 映射到标准路径（如 `content.body.paragraph.indent`）。
+
+解析顺序为：
+1. 优先按标准路径（含可省略 `content.` 前缀）解析；
+2. 标准路径不匹配时，再按 `localStyleAliases` 做一次映射；
+3. 映射结果仍需通过 `content.*` 范围与安全字段校验。
+
 ## 5. 安全与格式约束
 
 `localStyleAliases` 的目标路径需满足：
@@ -114,6 +129,12 @@ sectionStyle: string            # 可选，页码 section 匹配键；默认 sec
 
 补充约定：
 - `style.index` 为空（`index:`）或缺省时，等价为 `0lines`（不添加编号前缀）；
+- `style.index` 支持占位符：
+  - `{number}` / `{arabicIndex}`：阿拉伯数字（1, 2, 3...）；
+  - `{zhHansIndex}`：中文小写数字（一、二、三...）；
+  - `{zhHantIndex}`：中文大写数字（壹、贰、叁...）；
+  - `{romanIndex}` / `{romanUpperIndex}`：罗马数字大写（I, II, III...）；
+  - `{romanLowerIndex}`：罗马数字小写（i, ii, iii...）；
 - 颜色值可写为 `#ff0000` 或 `'#ff0000'`，解析时会去掉外层引号。
 
 ## 6. 兼容策略

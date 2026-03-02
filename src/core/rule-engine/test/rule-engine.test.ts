@@ -34,4 +34,19 @@ describe('RuleEngine', () => {
     expect(rules.length).toBeGreaterThan(0)
     expect(rules[0]?.name).toContain('GB/T 9704-2012')
   })
+
+  it('generates tokens for custom content level without adding new style rules', () => {
+    const baseRule = createValidRule()
+    const baseCompiled = ruleEngine.compile(baseRule)
+
+    const customRule = createValidRule()
+    const appendix = JSON.parse(JSON.stringify(customRule.content.body))
+    appendix.paragraph.indent = '3em'
+    customRule.content.appendix = appendix
+
+    const compiled = ruleEngine.compile(customRule)
+    expect(compiled.tokens['--content-appendix-paragraph-indent']).toBe('3em')
+    expect(compiled.cssText).toContain('--content-appendix-paragraph-indent: 3em;')
+    expect(compiled.rules).toHaveLength(baseCompiled.rules.length)
+  })
 })
