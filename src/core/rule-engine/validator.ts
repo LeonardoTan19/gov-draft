@@ -1,4 +1,5 @@
 import type { ValidationIssue, ValidationResult } from '../../types/rule'
+import { i18n } from '../../locales'
 import { canConvertCssLengthToPx } from '../utils/page-metrics-utils'
 import { evaluateNumericTemplateExpression } from '../utils/template-expression-utils'
 import { validateLocalStyleTargetPath } from '../utils/local-style-path-utils'
@@ -17,17 +18,18 @@ const PAGINATION_NUMBER_STYLE_SET = new Set(['arabic', 'roman', 'zhHans', 'zhHan
 const PAGINATION_EXPRESSION_ALLOWED_PATTERN = /^[0-9()+\-*/.\sA-Za-z_]+$/
 
 type AnyRecord = Record<string, unknown>
+const t = i18n.global.t
 
 export function validateRule(ruleConfig: unknown): ValidationResult {
   const issues: ValidationIssue[] = []
 
   if (!ruleConfig) {
-    pushError(issues, 'rule', '标准配置不能为空')
+    pushError(issues, 'rule', t('errors.validator.ruleConfigEmpty'))
     return buildValidationResult(issues)
   }
 
   if (typeof ruleConfig !== 'object') {
-    pushError(issues, 'rule', '标准配置必须是对象')
+    pushError(issues, 'rule', t('errors.validator.ruleConfigObject'))
     return buildValidationResult(issues)
   }
 
@@ -70,7 +72,7 @@ function isObject(value: unknown): value is AnyRecord {
 
 function validateString(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    pushError(issues, path, '必须是非空字符串')
+    pushError(issues, path, t('errors.validator.nonEmptyString'))
   }
 }
 
@@ -80,13 +82,13 @@ function validateCssLength(value: unknown, path: string, issues: ValidationIssue
   }
 
   if (typeof value !== 'string' || !CSS_LENGTH_PATTERN.test(value.trim())) {
-    pushError(issues, path, '必须是合法长度值（例如 16pt、37mm、2em、0）')
+    pushError(issues, path, t('errors.validator.cssLength'))
   }
 }
 
 function validateCssLineHeight(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || !CSS_LINE_HEIGHT_PATTERN.test(value.trim())) {
-    pushError(issues, path, '必须是合法行高值（数字或长度值）')
+    pushError(issues, path, t('errors.validator.cssLineHeight'))
   }
 }
 
@@ -100,48 +102,48 @@ function validateCssParagraphSpacing(value: unknown, path: string, issues: Valid
   }
 
   if (typeof value !== 'string' || !CSS_PARAGRAPH_SPACING_PATTERN.test(value.trim())) {
-    pushError(issues, path, '必须是合法段间距（支持长度值、0、或 Nlines）')
+    pushError(issues, path, t('errors.validator.cssParagraphSpacing'))
   }
 }
 
 function validateCssColor(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || !CSS_COLOR_PATTERN.test(value.trim())) {
-    pushError(issues, path, '必须是合法颜色值（hex/rgb/rgba/hsl/hsla）')
+    pushError(issues, path, t('errors.validator.cssColor'))
   }
 }
 
 function validateFontWeight(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'number' || !FONT_WEIGHT_SET.has(value)) {
-    pushError(issues, path, '必须是 100-900 之间的百位数字')
+    pushError(issues, path, t('errors.validator.fontWeight'))
   }
 }
 
 function validateTextAlign(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || !ALIGN_SET.has(value)) {
-    pushError(issues, path, '必须是 left/center/right/justify 之一')
+    pushError(issues, path, t('errors.validator.textAlign'))
   }
 }
 
 function validateBoolean(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'boolean') {
-    pushError(issues, path, '必须是布尔值')
+    pushError(issues, path, t('errors.validator.boolean'))
   }
 }
 
 function validateEnterStyle(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || !ENTER_STYLE_SET.has(value)) {
-    pushError(issues, path, '必须是 paragraph 或 lineBreak')
+    pushError(issues, path, t('errors.validator.enterStyle'))
   }
 }
 
 function validateContentItem(contentItem: unknown, path: string, issues: ValidationIssue[]): void {
   if (!isObject(contentItem)) {
-    pushError(issues, path, '字段缺失或类型错误')
+    pushError(issues, path, t('errors.validator.missingOrInvalidField'))
     return
   }
 
   if (!isObject(contentItem.fonts)) {
-    pushError(issues, `${path}.fonts`, '字段缺失或类型错误')
+    pushError(issues, `${path}.fonts`, t('errors.validator.missingOrInvalidField'))
   } else {
     validateString(contentItem.fonts.latinFamily, `${path}.fonts.latinFamily`, issues)
     validateString(contentItem.fonts.cjkFamily, `${path}.fonts.cjkFamily`, issues)
@@ -154,30 +156,30 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
   }
 
   if (!isObject(contentItem.style)) {
-    pushError(issues, `${path}.style`, '字段缺失或类型错误')
+    pushError(issues, `${path}.style`, t('errors.validator.missingOrInvalidField'))
   } else {
     validateCssLength(contentItem.style.size, `${path}.style.size`, issues)
     validateFontWeight(contentItem.style.weight, `${path}.style.weight`, issues)
     if (!isObject(contentItem.style.colors)) {
-      pushError(issues, `${path}.style.colors`, '字段缺失或类型错误')
+      pushError(issues, `${path}.style.colors`, t('errors.validator.missingOrInvalidField'))
     } else {
       validateCssColor(contentItem.style.colors.text, `${path}.style.colors.text`, issues)
       validateCssColor(contentItem.style.colors.background, `${path}.style.colors.background`, issues)
     }
 
     if (contentItem.style.index !== undefined && contentItem.style.index !== null && typeof contentItem.style.index !== 'string') {
-      pushError(issues, `${path}.style.index`, '必须是字符串')
+      pushError(issues, `${path}.style.index`, t('errors.validator.string'))
     }
   }
 
   if (!isObject(contentItem.paragraph)) {
-    pushError(issues, `${path}.paragraph`, '字段缺失或类型错误')
+    pushError(issues, `${path}.paragraph`, t('errors.validator.missingOrInvalidField'))
   } else {
     validateTextAlign(contentItem.paragraph.align, `${path}.paragraph.align`, issues)
     validateCssLength(contentItem.paragraph.indent, `${path}.paragraph.indent`, issues)
 
     if (!isObject(contentItem.paragraph.spacing)) {
-      pushError(issues, `${path}.paragraph.spacing`, '字段缺失或类型错误')
+      pushError(issues, `${path}.paragraph.spacing`, t('errors.validator.missingOrInvalidField'))
     } else {
       validateCssLineHeight(contentItem.paragraph.spacing.lineHeight, `${path}.paragraph.spacing.lineHeight`, issues)
       validateCssParagraphSpacing(contentItem.paragraph.spacing.before, `${path}.paragraph.spacing.before`, issues)
@@ -188,12 +190,12 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
 
 function validateContent(content: unknown, issues: ValidationIssue[]): void {
   if (!isObject(content)) {
-    pushError(issues, 'content', '字段缺失或类型错误')
+    pushError(issues, 'content', t('errors.validator.missingOrInvalidField'))
     return
   }
 
   if (!content.body) {
-    pushError(issues, 'content.body', '字段缺失或类型错误')
+    pushError(issues, 'content.body', t('errors.validator.missingOrInvalidField'))
   }
 
   Object.entries(content).forEach(([level, value]) => {
@@ -209,13 +211,13 @@ function validateH1SectionStyle(h1: unknown, issues: ValidationIssue[]): void {
   }
 
   if (typeof h1.sectionStyle !== 'string' || h1.sectionStyle.trim().length === 0) {
-    pushError(issues, 'content.h1.sectionStyle', '必须是非空字符串')
+    pushError(issues, 'content.h1.sectionStyle', t('errors.validator.nonEmptyString'))
   }
 }
 
 function validatePage(page: unknown, path: string, issues: ValidationIssue[], partial: boolean): void {
   if (!isObject(page)) {
-    pushError(issues, path, '字段缺失或类型错误')
+    pushError(issues, path, t('errors.validator.missingOrInvalidField'))
     return
   }
 
@@ -223,23 +225,23 @@ function validatePage(page: unknown, path: string, issues: ValidationIssue[], pa
     const hasNamedSize = typeof page.size === 'string' && page.size.trim().length > 0
     const hasCustomDimensions = isObject(page.dimensions)
     if (!hasNamedSize && !hasCustomDimensions) {
-      pushError(issues, `${path}.size`, '必须提供 size 或 dimensions(width/height)')
+      pushError(issues, `${path}.size`, t('errors.validator.pageSizeOrDimensions'))
     }
   }
 
   if (page.size !== undefined && (typeof page.size !== 'string' || page.size.trim().length === 0)) {
-    pushError(issues, `${path}.size`, '必须是非空字符串')
+    pushError(issues, `${path}.size`, t('errors.validator.nonEmptyString'))
   }
 
   if (page.orientation !== undefined) {
     if (typeof page.orientation !== 'string' || !PAGE_ORIENTATION_SET.has(page.orientation)) {
-      pushError(issues, `${path}.orientation`, '必须是 portrait 或 landscape')
+      pushError(issues, `${path}.orientation`, t('errors.validator.pageOrientation'))
     }
   }
 
   if (page.dimensions !== undefined) {
     if (!isObject(page.dimensions)) {
-      pushError(issues, `${path}.dimensions`, '必须是对象')
+      pushError(issues, `${path}.dimensions`, t('errors.validator.object'))
     } else {
       validateCssLength(page.dimensions.width, `${path}.dimensions.width`, issues)
       validateCssLength(page.dimensions.height, `${path}.dimensions.height`, issues)
@@ -249,7 +251,7 @@ function validatePage(page: unknown, path: string, issues: ValidationIssue[], pa
   }
 
   if (!isObject(page.margins)) {
-    pushError(issues, `${path}.margins`, '字段缺失或类型错误')
+    pushError(issues, `${path}.margins`, t('errors.validator.missingOrInvalidField'))
   } else {
     const margins = page.margins as AnyRecord
     const marginKeys = ['top', 'right', 'bottom', 'left'] as const
@@ -268,7 +270,7 @@ function validatePage(page: unknown, path: string, issues: ValidationIssue[], pa
 
   if (page.pagination !== undefined) {
     if (!isObject(page.pagination)) {
-      pushError(issues, `${path}.pagination`, '必须是对象')
+      pushError(issues, `${path}.pagination`, t('errors.validator.object'))
     } else if (page.pagination.enabled !== undefined) {
       validateBoolean(page.pagination.enabled, `${path}.pagination.enabled`, issues)
     }
@@ -284,24 +286,24 @@ function validatePaginationSections(page: unknown, paginationSections: unknown, 
   }
 
   if (!isObject(paginationSections)) {
-    pushError(issues, 'paginationSections', '页码启用时必须提供 section 页码配置对象')
+    pushError(issues, 'paginationSections', t('errors.validator.paginationSectionsRequired'))
     return
   }
 
   const sectionEntries = Object.entries(paginationSections)
   if (sectionEntries.length === 0) {
-    pushError(issues, 'paginationSections', '至少需要一个 section 配置')
+    pushError(issues, 'paginationSections', t('errors.validator.atLeastOneSection'))
     return
   }
 
   sectionEntries.forEach(([sectionKey, sectionValue]) => {
     if (sectionKey.trim().length === 0) {
-      pushError(issues, 'paginationSections', 'section 键名不能为空')
+      pushError(issues, 'paginationSections', t('errors.validator.sectionKeyEmpty'))
       return
     }
 
     if (!isObject(sectionValue)) {
-      pushError(issues, `paginationSections.${sectionKey}`, '必须是对象')
+      pushError(issues, `paginationSections.${sectionKey}`, t('errors.validator.object'))
       return
     }
 
@@ -318,14 +320,14 @@ function validatePaginationSections(page: unknown, paginationSections: unknown, 
     }
 
     if (sectionValue.pagination === undefined && sectionValue.page === undefined && sectionValue.parser === undefined) {
-      pushError(issues, `paginationSections.${sectionKey}`, '至少需要提供 pagination/page/parser 之一')
+      pushError(issues, `paginationSections.${sectionKey}`, t('errors.validator.atLeastOneSectionOption'))
     }
   })
 }
 
 function validatePaginationConfig(pagination: unknown, path: string, issues: ValidationIssue[]): void {
   if (!isObject(pagination)) {
-    pushError(issues, path, '字段缺失或类型错误')
+    pushError(issues, path, t('errors.validator.missingOrInvalidField'))
     return
   }
 
@@ -335,20 +337,20 @@ function validatePaginationConfig(pagination: unknown, path: string, issues: Val
 
   if (pagination.numberStyle !== undefined) {
     if (typeof pagination.numberStyle !== 'string' || !PAGINATION_NUMBER_STYLE_SET.has(pagination.numberStyle)) {
-      pushError(issues, `${path}.numberStyle`, '必须是 arabic/roman/zhHans/zhHant 之一')
+      pushError(issues, `${path}.numberStyle`, t('errors.validator.paginationNumberStyle'))
     }
   }
 
   validatePaginationFormat(pagination.format, `${path}.format`, issues)
 
   if (!isObject(pagination.style)) {
-    pushError(issues, `${path}.style`, '字段缺失或类型错误')
+    pushError(issues, `${path}.style`, t('errors.validator.missingOrInvalidField'))
   } else {
     validatePaginationStyle(pagination.style, `${path}.style`, issues)
   }
 
   if (!isObject(pagination.position)) {
-    pushError(issues, `${path}.position`, '字段缺失或类型错误')
+    pushError(issues, `${path}.position`, t('errors.validator.missingOrInvalidField'))
   } else {
     validatePaginationPosition(pagination.position, `${path}.position`, issues)
   }
@@ -356,7 +358,7 @@ function validatePaginationConfig(pagination: unknown, path: string, issues: Val
 
 function validatePaginationStyle(style: AnyRecord, path: string, issues: ValidationIssue[]): void {
   if (!isObject(style.fonts)) {
-    pushError(issues, `${path}.fonts`, '字段缺失或类型错误')
+    pushError(issues, `${path}.fonts`, t('errors.validator.missingOrInvalidField'))
   } else {
     validateString(style.fonts.latinFamily, `${path}.fonts.latinFamily`, issues)
     validateString(style.fonts.cjkFamily, `${path}.fonts.cjkFamily`, issues)
@@ -372,7 +374,7 @@ function validatePaginationStyle(style: AnyRecord, path: string, issues: Validat
   validateFontWeight(style.weight, `${path}.weight`, issues)
 
   if (!isObject(style.colors)) {
-    pushError(issues, `${path}.colors`, '字段缺失或类型错误')
+    pushError(issues, `${path}.colors`, t('errors.validator.missingOrInvalidField'))
     return
   }
 
@@ -381,19 +383,19 @@ function validatePaginationStyle(style: AnyRecord, path: string, issues: Validat
 
 function validatePaginationPosition(position: AnyRecord, path: string, issues: ValidationIssue[]): void {
   if (!isObject(position.vertical)) {
-    pushError(issues, `${path}.vertical`, '字段缺失或类型错误')
+    pushError(issues, `${path}.vertical`, t('errors.validator.missingOrInvalidField'))
   } else {
     if (typeof position.vertical.anchor !== 'string' || !PAGINATION_VERTICAL_ANCHOR_SET.has(position.vertical.anchor)) {
-      pushError(issues, `${path}.vertical.anchor`, '必须是 top 或 bottom')
+      pushError(issues, `${path}.vertical.anchor`, t('errors.validator.verticalAnchor'))
     }
     validateCssLength(position.vertical.offset, `${path}.vertical.offset`, issues)
   }
 
   if (!isObject(position.horizontal)) {
-    pushError(issues, `${path}.horizontal`, '字段缺失或类型错误')
+    pushError(issues, `${path}.horizontal`, t('errors.validator.missingOrInvalidField'))
   } else {
     if (typeof position.horizontal.anchor !== 'string' || !PAGINATION_HORIZONTAL_ANCHOR_SET.has(position.horizontal.anchor)) {
-      pushError(issues, `${path}.horizontal.anchor`, '必须是 left/center/right/outside/inside 之一')
+      pushError(issues, `${path}.horizontal.anchor`, t('errors.validator.horizontalAnchor'))
     }
     validateCssLength(position.horizontal.offset, `${path}.horizontal.offset`, issues)
   }
@@ -401,7 +403,7 @@ function validatePaginationPosition(position: AnyRecord, path: string, issues: V
 
 function validatePaginationFormat(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    pushError(issues, path, '必须是非空字符串')
+    pushError(issues, path, t('errors.validator.nonEmptyString'))
     return
   }
 
@@ -409,7 +411,7 @@ function validatePaginationFormat(value: unknown, path: string, issues: Validati
   for (const match of expressionMatches) {
     const expression = (match[1] ?? '').trim()
     if (!isValidPaginationExpression(expression)) {
-      pushError(issues, path, `表达式非法: {${expression}}`)
+      pushError(issues, path, t('errors.validator.invalidExpression', { expression: `{${expression}}` }))
     }
   }
 }
@@ -435,13 +437,13 @@ function isValidPaginationExpression(expression: string): boolean {
 
 function validateConvertiblePageMargin(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (!canConvertCssLengthToPx(value)) {
-    pushError(issues, path, '必须是可换算为像素的长度值（仅支持 mm/cm/in/pt/px/0）')
+    pushError(issues, path, t('errors.validator.convertibleCssLength'))
   }
 }
 
 function validateParser(parser: unknown, issues: ValidationIssue[], path: string, partial: boolean): void {
   if (!isObject(parser)) {
-    pushError(issues, path, '字段缺失或类型错误')
+    pushError(issues, path, t('errors.validator.missingOrInvalidField'))
     return
   }
 
@@ -464,11 +466,11 @@ function validateParser(parser: unknown, issues: ValidationIssue[], path: string
 
   if (!partial || parser.disabledSyntax !== undefined) {
     if (!Array.isArray(parser.disabledSyntax)) {
-      pushError(issues, `${path}.disabledSyntax`, '必须是数组')
+      pushError(issues, `${path}.disabledSyntax`, t('errors.validator.array'))
     } else {
       parser.disabledSyntax.forEach((item, index) => {
         if (typeof item !== 'string' || item.trim().length === 0) {
-          pushError(issues, `${path}.disabledSyntax.${index}`, '包含非法语法项')
+          pushError(issues, `${path}.disabledSyntax.${index}`, t('errors.validator.invalidSyntaxItem'))
         }
       })
     }
@@ -476,16 +478,16 @@ function validateParser(parser: unknown, issues: ValidationIssue[], path: string
 
   if (parser.localStyleAliases !== undefined) {
     if (!isObject(parser.localStyleAliases)) {
-      pushError(issues, `${path}.localStyleAliases`, '必须是对象')
+      pushError(issues, `${path}.localStyleAliases`, t('errors.validator.object'))
     } else {
       Object.entries(parser.localStyleAliases).forEach(([alias, target]) => {
         if (alias.trim().length === 0) {
-          pushError(issues, `${path}.localStyleAliases`, '别名键不能为空')
+          pushError(issues, `${path}.localStyleAliases`, t('errors.validator.aliasKeyEmpty'))
           return
         }
 
         if (typeof target !== 'string') {
-          pushError(issues, `${path}.localStyleAliases.${alias}`, '目标路径必须是字符串')
+          pushError(issues, `${path}.localStyleAliases.${alias}`, t('errors.validator.aliasTargetString'))
           return
         }
 
@@ -493,17 +495,17 @@ function validateParser(parser: unknown, issues: ValidationIssue[], path: string
         const pathValidation = validateLocalStyleTargetPath(normalizedTarget)
 
         if (!pathValidation.formatValid) {
-          pushError(issues, `${path}.localStyleAliases.${alias}`, '目标路径格式非法（需为点分层级路径）')
+          pushError(issues, `${path}.localStyleAliases.${alias}`, t('errors.validator.aliasTargetFormat'))
           return
         }
 
         if (!pathValidation.inScope) {
-          pushError(issues, `${path}.localStyleAliases.${alias}`, '目标路径必须在 content.* 范围内')
+          pushError(issues, `${path}.localStyleAliases.${alias}`, t('errors.validator.aliasTargetScope'))
           return
         }
 
         if (!pathValidation.safe) {
-          pushError(issues, `${path}.localStyleAliases.${alias}`, '目标路径包含不安全字段')
+          pushError(issues, `${path}.localStyleAliases.${alias}`, t('errors.validator.aliasTargetUnsafe'))
         }
       })
     }

@@ -6,12 +6,14 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { DocumentMetadata } from '../types/gov'
+import { i18n } from '../locales'
 
 /**
  * 文档 Store
  * 管理编辑器内容、渲染的 HTML、文档元数据和保存状态
  */
 export const useDocumentStore = defineStore('document', () => {
+  const t = i18n.global.t
   // State
   /** Markdown 原始内容 */
   const content = ref<string>('')
@@ -86,7 +88,7 @@ export const useDocumentStore = defineStore('document', () => {
       isDirty.value = false
       lastSaved.value = new Date()
     } catch (error) {
-      console.error('Failed to save document:', error)
+      console.error(t('logs.document.saveFailed'), error)
       throw error
     }
   }
@@ -121,7 +123,7 @@ export const useDocumentStore = defineStore('document', () => {
           isDirty.value = false
         }
       } catch (error) {
-        console.error('Failed to load document:', error)
+        console.error(t('logs.document.loadFailed'), error)
       }
     }
   }
