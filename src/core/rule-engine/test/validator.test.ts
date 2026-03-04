@@ -26,7 +26,6 @@ describe('validateRule', () => {
       expect.arrayContaining([
         'parser.enterStyle: 必须是 paragraph 或 lineBreak',
         'parser.headingNumbering: 必须是布尔值',
-        'parser.disabledSyntax.1: 包含非法语法项',
         'parser.localStyleAliases.bodyIndent: 目标路径格式非法（需为点分层级路径）'
       ])
     )
@@ -55,7 +54,7 @@ describe('validateRule', () => {
       }
     }
     invalidRule.page = {
-      size: 'A5',
+      size: '',
       orientation: 'horizontal',
       margins: { top: '37mm', right: '26mm', bottom: '35mm', left: '28mm' }
     }
@@ -69,8 +68,8 @@ describe('validateRule', () => {
         'content.body.paragraph.indent: 必须是合法长度值（例如 16pt、37mm、2em、0）',
         'content.body.paragraph.spacing.lineHeight: 必须是合法行高值（数字或长度值）',
         'content.body.paragraph.spacing.before: 必须是合法段间距（支持长度值、0、或 Nlines）',
-        'page.size: 必须是以下值之一: A4, A3, Letter',
-        'page.orientation: 必须是以下值之一: portrait, landscape'
+        'page.size: 必须是非空字符串',
+        'page.orientation: 必须是 portrait 或 landscape'
       ])
     )
   })
@@ -127,12 +126,12 @@ describe('validateRule', () => {
 
   it('returns invalid when content.h1.sectionStyle is malformed', () => {
     const invalidRule = createValidRule()
-    invalidRule.content.h1.sectionStyle = 'custom-style'
+    invalidRule.content.h1.sectionStyle = '   '
 
     const result = validateRule(invalidRule)
     expect(result.valid).toBe(false)
     expect(result.errors).toContain(
-      'content.h1.sectionStyle: 必须是 section 或 section + 数字（如 section2）'
+      'content.h1.sectionStyle: 必须是非空字符串'
     )
   })
 

@@ -24,6 +24,11 @@ const dragState = {
 }
 
 const styleFingerprint = computed(() => ruleStore.getRuleCssText)
+const paginationFingerprint = computed(() => JSON.stringify({
+  page: ruleStore.currentRule?.page,
+  paginationSections: ruleStore.currentRule?.paginationSections,
+  h1SectionStyle: ruleStore.currentRule?.content?.h1?.sectionStyle
+}))
 const paginationEnabled = computed(() => ruleStore.currentRule?.page.pagination?.enabled === true)
 const stageStyle = computed(() => ({
   '--preview-scale': `${previewScale.value}`
@@ -86,7 +91,7 @@ const updatePreviewScale = () => {
 
 const handleResize = () => {
   updatePreviewScale()
-  requestRepaginate()
+  centerStageOnSmallScreen()
 }
 
 const centerStageOnSmallScreen = () => {
@@ -192,6 +197,12 @@ watch(
 )
 
 watch(styleFingerprint, () => {
+  updatePreviewScale()
+  requestRepaginate()
+})
+
+watch(paginationFingerprint, () => {
+  updatePreviewScale()
   requestRepaginate()
 })
 </script>

@@ -36,6 +36,10 @@ export class MarkdownParser {
   private md: MarkdownIt;
   private options: MarkdownOptions;
 
+  private getDisabledSyntax(): string[] {
+    return Array.isArray(this.options.disabledSyntax) ? this.options.disabledSyntax : [];
+  }
+
   constructor(options: Partial<MarkdownOptions> = {}) {
     this.options = {
       ...defaultOptions,
@@ -83,17 +87,18 @@ export class MarkdownParser {
       linkify: options.linkify,
       typographer: options.typographer
     });
+    const disabledSyntax = Array.isArray(options.disabledSyntax) ? options.disabledSyntax : [];
 
     this.registerLocalStyleContainer(parser);
     this.registerTextFontScopes(parser);
 
-    if (options.disabledSyntax.includes('codeBlock')) {
+    if (disabledSyntax.includes('codeBlock')) {
       parser.disable(['fence', 'code']);
     }
-    if (options.disabledSyntax.includes('blockquote')) {
+    if (disabledSyntax.includes('blockquote')) {
       parser.disable('blockquote');
     }
-    if (options.disabledSyntax.includes('horizontalRule')) {
+    if (disabledSyntax.includes('horizontalRule')) {
       parser.disable('hr');
     }
 
@@ -303,8 +308,9 @@ export class MarkdownParser {
 
   private preprocessMarkdown(markdown: string): string {
     let normalized = markdown;
+    const disabledSyntax = this.getDisabledSyntax();
 
-    if (this.options.disabledSyntax.includes('codeBlock')) {
+    if (disabledSyntax.includes('codeBlock')) {
       normalized = normalized.replace(/```[\s\S]*?```/g, (block) => {
         return block
           .replace(/^```\w*\s*\n?/, '')
@@ -318,11 +324,11 @@ export class MarkdownParser {
     for (const line of lines) {
       let currentLine = line;
 
-      if (this.options.disabledSyntax.includes('blockquote')) {
+      if (disabledSyntax.includes('blockquote')) {
         currentLine = currentLine.replace(/^\s*>\s?/, '');
       }
 
-      if (this.options.disabledSyntax.includes('unorderedList')) {
+      if (disabledSyntax.includes('unorderedList')) {
         currentLine = currentLine.replace(/^\s*[-*+]\s+/, '');
       }
 

@@ -11,6 +11,11 @@ const RESERVED_CUSTOM_STYLE_KEYS = new Set([
   '--page-margins-left'
 ])
 
+const RULE_STORAGE_KEY = 'gov-draft-rule-v2'
+const CUSTOM_STYLE_STORAGE_KEY = 'gov-draft-custom-styles-v2'
+const LEGACY_RULE_STORAGE_KEY = 'gov-draft-rule'
+const LEGACY_CUSTOM_STYLE_STORAGE_KEY = 'gov-draft-custom-styles'
+
 export const useRuleStore = defineStore('rule', () => {
   const currentRule = ref<RuleConfig | null>(null)
   const availableRules = ref<RuleConfig[]>([])
@@ -49,7 +54,7 @@ export const useRuleStore = defineStore('rule', () => {
 
   function resetCustomStyles(): void {
     customStyles.value = {}
-    localStorage.removeItem('gov-draft-custom-styles')
+    localStorage.removeItem(CUSTOM_STYLE_STORAGE_KEY)
   }
 
   async function saveRule(rule: RuleConfig): Promise<void> {
@@ -74,7 +79,10 @@ export const useRuleStore = defineStore('rule', () => {
     availableRules.value = ruleEngine.getBuiltinRules()
 
     try {
-      const savedRule = localStorage.getItem('gov-draft-rule')
+      localStorage.removeItem(LEGACY_RULE_STORAGE_KEY)
+      localStorage.removeItem(LEGACY_CUSTOM_STYLE_STORAGE_KEY)
+
+      const savedRule = localStorage.getItem(RULE_STORAGE_KEY)
       if (savedRule) {
         const rule = JSON.parse(savedRule) as RuleConfig
         const builtinRule = availableRules.value.find((item) => item.name === rule.name)
@@ -90,7 +98,7 @@ export const useRuleStore = defineStore('rule', () => {
         }
       }
 
-      const savedCustomStyles = localStorage.getItem('gov-draft-custom-styles')
+      const savedCustomStyles = localStorage.getItem(CUSTOM_STYLE_STORAGE_KEY)
       if (savedCustomStyles) {
         const parsedStyles = JSON.parse(savedCustomStyles) as unknown
         const rawStyles = isStringRecord(parsedStyles) ? parsedStyles : {}
@@ -146,7 +154,7 @@ export const useRuleStore = defineStore('rule', () => {
 
   function saveRuleToStorage(rule: RuleConfig): void {
     try {
-      localStorage.setItem('gov-draft-rule', JSON.stringify(rule))
+      localStorage.setItem(RULE_STORAGE_KEY, JSON.stringify(rule))
     } catch (error) {
       console.error('Failed to save rule to storage:', error)
     }
@@ -154,7 +162,7 @@ export const useRuleStore = defineStore('rule', () => {
 
   function saveCustomStylesToStorage(): void {
     try {
-      localStorage.setItem('gov-draft-custom-styles', JSON.stringify(customStyles.value))
+      localStorage.setItem(CUSTOM_STYLE_STORAGE_KEY, JSON.stringify(customStyles.value))
     } catch (error) {
       console.error('Failed to save custom styles to storage:', error)
     }

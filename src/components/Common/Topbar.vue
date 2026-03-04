@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Settings } from 'lucide-vue-next'
 import { useRuleStore } from '../../stores/rule'
+import RuleSettingsPanel from '../Settings/RuleSettingsPanel.vue'
 
 const ruleStore = useRuleStore()
 const currentRuleName = computed(() => ruleStore.currentRule?.name || '未加载')
+const showSettingsPanel = ref(false)
 
 const parserSummary = computed(() => {
   const parser = ruleStore.currentRule?.parser
@@ -12,26 +14,21 @@ const parserSummary = computed(() => {
     return '未加载解析策略'
   }
 
-  const disabled = parser.disabledSyntax.length > 0
-    ? parser.disabledSyntax.join('、')
+  const disabledSyntax = parser.disabledSyntax ?? []
+
+  const disabled = disabledSyntax.length > 0
+    ? disabledSyntax.join('、')
     : '无'
 
   return `标题编号: ${parser.headingNumbering ? '开启' : '关闭'} ｜ 禁用语法: ${disabled}`
 })
 
-const switchRule = () => {
-  const rules = ruleStore.availableRules
-  if (rules.length === 0) {
-    return
-  }
+const openSettings = () => {
+  showSettingsPanel.value = true
+}
 
-  const currentName = ruleStore.currentRule?.name
-  const currentIndex = rules.findIndex((item) => item.name === currentName)
-  const nextIndex = (currentIndex + 1 + rules.length) % rules.length
-  const nextRule = rules[nextIndex]
-  if (nextRule) {
-    ruleStore.loadRule(nextRule)
-  }
+const closeSettings = () => {
+  showSettingsPanel.value = false
 }
 </script>
 
@@ -45,7 +42,7 @@ const switchRule = () => {
       <div class="rule-tooltip">
         <button
           class="btn btn--rule btn--with-icon"
-          @click="switchRule"
+          @click="openSettings"
         >
           <Settings class="icon" />
           标准：{{ currentRuleName }}
@@ -55,6 +52,12 @@ const switchRule = () => {
         </div>
       </div>
     </div>
+
+    <RuleSettingsPanel
+      :visible="showSettingsPanel"
+      :rule="ruleStore.currentRule"
+      @close="closeSettings"
+    />
   </header>
 </template>
 

@@ -20,6 +20,8 @@ const DEFAULT_PAGE_CONFIG: RuleConfig['page'] = {
   }
 }
 
+const OVERFLOW_TOLERANCE_PX = 0.35
+
 function collectBlocks(html: string): string[] {
   const container = document.createElement('div')
   container.innerHTML = html
@@ -44,7 +46,27 @@ function collectBlocks(html: string): string[] {
 }
 
 function isOverflowing(el: HTMLElement): boolean {
-  return el.scrollHeight - el.clientHeight > 1
+  const scrollOverflow = el.scrollHeight - el.clientHeight
+  if (scrollOverflow > OVERFLOW_TOLERANCE_PX) {
+    return true
+  }
+
+  const lastElement = el.lastElementChild as HTMLElement | null
+  if (!lastElement) {
+    return false
+  }
+
+  const containerRect = el.getBoundingClientRect()
+  const lastRect = lastElement.getBoundingClientRect()
+  if (containerRect.height <= 0 || lastRect.height <= 0) {
+    return false
+  }
+
+  const computedStyle = window.getComputedStyle(lastElement)
+  const marginBottom = Number.parseFloat(computedStyle.marginBottom || '0')
+  const contentBottom = lastRect.bottom + (Number.isFinite(marginBottom) ? marginBottom : 0)
+
+  return contentBottom - containerRect.bottom > OVERFLOW_TOLERANCE_PX
 }
 
 function isH1Block(block: string): boolean {

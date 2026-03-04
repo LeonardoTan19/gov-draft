@@ -11,7 +11,6 @@ export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 90
 export type NumberStyle = 'arabic' | 'roman' | 'zhHans' | 'zhHant';
 export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
-export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
 export type LocalStyleTargetPath = string;
 export type EnterStyle = 'paragraph' | 'lineBreak';
 
@@ -64,8 +63,12 @@ export interface ContentConfig {
 }
 
 export interface PageConfig {
-  size: 'A4' | 'A3' | 'Letter';
-  orientation: 'portrait' | 'landscape';
+  size?: string;
+  dimensions?: {
+    width: CssLength;
+    height: CssLength;
+  };
+  orientation?: 'portrait' | 'landscape';
   margins: {
     top: CssLength;
     right: CssLength;
@@ -108,6 +111,8 @@ export interface PaginationConfig {
 }
 
 export interface SectionPaginationConfig {
+  page?: Partial<PageConfig>;
+  parser?: Partial<ParserConfig>;
   pagination: PaginationConfig & {
     enabled?: boolean;
   };
@@ -120,9 +125,10 @@ export interface ParserConfig {
   enterStyle?: EnterStyle;
   linkify?: boolean;
   typographer?: boolean;
-  headingNumbering: boolean;
-  disabledSyntax: DisabledSyntax[];
+  headingNumbering?: boolean;
+  disabledSyntax?: string[];
   localStyleAliases?: Record<string, LocalStyleTargetPath>;
+  [key: string]: unknown;
 }
 
 export interface StyleDeclaration {

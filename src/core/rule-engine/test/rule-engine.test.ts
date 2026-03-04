@@ -23,10 +23,10 @@ describe('RuleEngine', () => {
 
   it('throws meaningful error when compile receives invalid rule', () => {
     const invalidRule = createValidRule()
-    invalidRule.page.size = 'A5' as 'A4'
+    invalidRule.page.margins.top = '2em' as '37mm'
 
     expect(() => ruleEngine.compile(invalidRule)).toThrowError(/标准配置无效/)
-    expect(() => ruleEngine.compile(invalidRule)).toThrowError(/page\.size/)
+    expect(() => ruleEngine.compile(invalidRule)).toThrowError(/page\.margins\.top/)
   })
 
   it('provides builtin rules from yaml source', () => {
