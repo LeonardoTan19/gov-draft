@@ -24,6 +24,13 @@
 - 完成改动后按影响范围运行：`pnpm build`，必要时补充 `pnpm test` 和 `pnpm lint`。
 - 如果未运行某项验证，需要在结果中明确说明。
 
+## 分支使用方式
+- 长期分支仅保留 `main` 与 `develop`：`main` 只承载已发布稳定版本，`develop` 承载持续开发。
+- 新功能从 `develop` 拉取 `feature/*`，完成后合并回 `develop`，不直接提交到长期分支。
+- 发布前从 `develop` 创建 `release/*`，测试通过后合并到 `main` 并打版本标签，同时回合到 `develop`。
+- 线上问题从 `main` 创建 `hotfix/*`，修复后同时合并到 `main` 与 `develop`。
+- 历史改写仅在必要时进行，优先使用 `--force-with-lease` 并先保留备份分支。
+
 ## 输出偏好
 - 回答使用中文。
 - 先给结果，再给关键改动点、验证情况和必要的后续建议。
