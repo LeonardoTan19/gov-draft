@@ -1,6 +1,7 @@
 import { EditorState, RangeSetBuilder, StateEffect, StateField, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, GutterMarker, WidgetType, gutter, type DecorationSet } from '@codemirror/view';
 import { parseHeadingBlocks } from '../syntax';
+import { i18n } from '../../../../locales';
 
 const toggleHeadingFoldEffect = StateEffect.define<string>();
 
@@ -48,11 +49,12 @@ class FoldMarker extends GutterMarker {
   }
 
   toDOM(): HTMLElement {
+    const t = i18n.global.t;
     const marker = document.createElement('button');
     marker.type = 'button';
     marker.className = 'cm-heading-fold-button';
     marker.textContent = this.folded ? '▸' : '▾';
-    marker.setAttribute('aria-label', this.folded ? '展开标题内容' : '折叠标题内容');
+    marker.setAttribute('aria-label', this.folded ? t('codemirror.expandHeading') : t('codemirror.collapseHeading'));
     return marker;
   }
 }
@@ -72,12 +74,13 @@ class HeadingFoldedWidget extends WidgetType {
   }
 
   toDOM(): HTMLElement {
+    const t = i18n.global.t;
     const foldedButton = document.createElement('button');
     foldedButton.type = 'button';
     foldedButton.className = `cm-heading-inline-fold cm-heading-inline-fold-level-${Math.min(this.headingLevel, 6)}`;
     foldedButton.textContent = '...';
     foldedButton.dataset.headingId = this.headingId;
-    foldedButton.setAttribute('aria-label', '展开标题内容');
+    foldedButton.setAttribute('aria-label', t('codemirror.expandHeading'));
     return foldedButton;
   }
 

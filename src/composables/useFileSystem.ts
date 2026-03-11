@@ -8,6 +8,7 @@ import { useDocumentStore } from '../stores/doc'
 import { useRuleStore } from '../stores/rule'
 import { cssLengthToPx, resolvePageDimensions } from '../core/utils/page-metrics-utils'
 import type { CssLength } from '../types/rule'
+import { i18n } from '../locales'
 
 const MM_PER_PX = 25.4 / 96
 
@@ -20,6 +21,7 @@ const MM_PER_PX = 25.4 / 96
 export function useFileSystem() {
   const docStore = useDocumentStore()
   const ruleStore = useRuleStore()
+  const t = i18n.global.t
 
   /**
    * 导入文件
@@ -29,7 +31,7 @@ export function useFileSystem() {
   const importFile = async (file: File): Promise<string> => {
     // 验证文件类型
     if (!file.name.endsWith('.md') && !file.type.includes('markdown')) {
-      throw new Error(`不支持的文件格式: ${file.name}。仅支持 Markdown (.md) 文件。`)
+      throw new Error(t('fileSystem.unsupportedFormat', { filename: file.name }))
     }
 
     try {
@@ -40,8 +42,10 @@ export function useFileSystem() {
       
       return content
     } catch (error) {
-      console.error('文件导入失败:', error)
-      throw new Error(`文件导入失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      console.error(t('logs.fileSystem.importFailed'), error)
+      throw new Error(t('fileSystem.importFailed', {
+        message: error instanceof Error ? error.message : t('fileSystem.unknownError')
+      }))
     }
   }
 
@@ -61,8 +65,10 @@ export function useFileSystem() {
       // 触发下载
       downloadBlob(blob, finalFilename)
     } catch (error) {
-      console.error('Markdown 导出失败:', error)
-      throw new Error(`Markdown 导出失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      console.error(t('logs.fileSystem.markdownExportFailed'), error)
+      throw new Error(t('fileSystem.markdownExportFailed', {
+        message: error instanceof Error ? error.message : t('fileSystem.unknownError')
+      }))
     }
   }
 
@@ -85,8 +91,10 @@ export function useFileSystem() {
       // 触发下载
       downloadBlob(blob, finalFilename)
     } catch (error) {
-      console.error('HTML 导出失败:', error)
-      throw new Error(`HTML 导出失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      console.error(t('logs.fileSystem.htmlExportFailed'), error)
+      throw new Error(t('fileSystem.htmlExportFailed', {
+        message: error instanceof Error ? error.message : t('fileSystem.unknownError')
+      }))
     }
   }
 
@@ -98,7 +106,7 @@ export function useFileSystem() {
     try {
       const pages = Array.from(document.querySelectorAll<HTMLElement>('.paper-page'))
       if (pages.length === 0) {
-        throw new Error('未找到可导出的分页内容，请先确认预览区域已渲染。')
+        throw new Error(t('fileSystem.pdfExportNoPages'))
       }
 
       await waitForFontsReady()
@@ -149,8 +157,10 @@ export function useFileSystem() {
 
       pdf.save(buildPdfFileName(docStore.metadata.title))
     } catch (error) {
-      console.error('PDF 导出失败:', error)
-      throw new Error(`PDF 导出失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      console.error(t('logs.fileSystem.pdfExportFailed'), error)
+      throw new Error(t('fileSystem.pdfExportFailed', {
+        message: error instanceof Error ? error.message : t('fileSystem.unknownError')
+      }))
     }
   }
 
@@ -229,12 +239,12 @@ export function useFileSystem() {
         if (typeof content === 'string') {
           resolve(content)
         } else {
-          reject(new Error('文件读取结果不是字符串'))
+          reject(new Error(t('fileSystem.readResultNotString')))
         }
       }
       
       reader.onerror = () => {
-        reject(new Error('文件读取失败'))
+        reject(new Error(t('fileSystem.readFileFailed')))
       }
       
       reader.readAsText(file, 'UTF-8')
