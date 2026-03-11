@@ -154,7 +154,7 @@ export const useDocumentStore = defineStore('document', () => {
     if (!content.value) return 0
     
     // 移除 Markdown 语法标记，但保留链接文本
-    let plainText = content.value
+    const plainText = content.value
       .replace(/!\[.*?\]\(.*?\)/g, '') // 移除图片（包括 alt 文本）
       .replace(/\[(.*?)\]\(.*?\)/g, '$1') // 保留链接文本，移除 URL
       .replace(/[#*_`~]/g, '') // 移除 Markdown 符号

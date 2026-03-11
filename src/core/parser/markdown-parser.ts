@@ -1,49 +1,44 @@
 import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
-import type { HeadingLevel, LocalStyleTargetPath, ParserConfig } from '../../types/rule';
+import type { HeadingLevel, ParserConfig } from '../../types/rule';
+import { toCssCustomProperty } from '../rule-engine/css-variable';
+import { sanitizeCssValue } from '../utils/css-sanitize-utils';
+import { resolveCanonicalLocalStylePath } from '../utils/local-style-path-utils';
+import { NumberFormatUtils } from '../utils/number-format-utils';
 
 export type MarkdownOptions = ParserConfig;
 
-type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
+type NumberingPlaceholder =
+  | '{number}'
+  | '{arabicIndex}'
+  | '{zhHansIndex}'
+  | '{zhHantIndex}'
+  | '{romanIndex}'
+  | '{romanUpperIndex}'
+  | '{romanLowerIndex}';
 
-type LocalStyleAliasMap = Record<string, LocalStyleTargetPath>;
-
-const CSS_LENGTH_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
-const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
-const LOCAL_STYLE_TARGET_TO_VARIABLES: Record<LocalStyleTargetPath, string[]> = {
-  'content.body.paragraph.indent': ['--font-body-indent'],
-  'content.h1.paragraph.indent': ['--font-heading-h1-indent'],
-  'content.h2.paragraph.indent': ['--font-heading-h2-indent'],
-  'content.h3.paragraph.indent': ['--font-heading-h3-indent'],
-  'content.h4.paragraph.indent': ['--font-heading-h4-indent']
-};
-const DEFAULT_LOCAL_STYLE_ALIASES: LocalStyleAliasMap = {
-  indent: 'content.body.paragraph.indent',
-  bodyIndent: 'content.body.paragraph.indent',
-  h1Indent: 'content.h1.paragraph.indent',
-  h2Indent: 'content.h2.paragraph.indent',
-  h3Indent: 'content.h3.paragraph.indent',
-  h4Indent: 'content.h4.paragraph.indent',
-  'content.body.paragraph.indent': 'content.body.paragraph.indent',
-  'content.h1.paragraph.indent': 'content.h1.paragraph.indent',
-  'content.h2.paragraph.indent': 'content.h2.paragraph.indent',
-  'content.h3.paragraph.indent': 'content.h3.paragraph.indent',
-  'content.h4.paragraph.indent': 'content.h4.paragraph.indent'
-};
+const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
+const HEADING_INDEX_DISABLED_VALUE = '0lines';
+const MANUAL_BREAK_SUFFIX_PATTERN = /\s*\/\/\s*$/;
+const EMPTY_PARAGRAPH_PLACEHOLDER = '&nbsp;';
 
 const defaultOptions: MarkdownOptions = {
   html: false,
-  breaks: true,
+  enterStyle: 'paragraph',
   linkify: true,
   typographer: true,
   headingNumbering: true,
   disabledSyntax: ['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule'],
-  localStyleAliases: DEFAULT_LOCAL_STYLE_ALIASES
+  localStyleAliases: {}
 };
 
 export class MarkdownParser {
   private md: MarkdownIt;
   private options: MarkdownOptions;
+
+  private getDisabledSyntax(): string[] {
+    return Array.isArray(this.options.disabledSyntax) ? this.options.disabledSyntax : [];
+  }
 
   constructor(options: Partial<MarkdownOptions> = {}) {
     this.options = {
@@ -88,28 +83,30 @@ export class MarkdownParser {
   private createMarkdownIt(options: MarkdownOptions): MarkdownIt {
     const parser = new MarkdownIt({
       html: options.html,
-      breaks: options.breaks,
+      breaks: options.enterStyle === 'lineBreak',
       linkify: options.linkify,
       typographer: options.typographer
     });
+    const disabledSyntax = Array.isArray(options.disabledSyntax) ? options.disabledSyntax : [];
 
-    this.registerLocalStyleContainer(parser, options.localStyleAliases ?? {});
+    this.registerLocalStyleContainer(parser);
+    this.registerTextFontScopes(parser);
 
-    if (options.disabledSyntax.includes('codeBlock')) {
+    if (disabledSyntax.includes('codeBlock')) {
       parser.disable(['fence', 'code']);
     }
-    if (options.disabledSyntax.includes('blockquote')) {
+    if (disabledSyntax.includes('blockquote')) {
       parser.disable('blockquote');
     }
-    if (options.disabledSyntax.includes('horizontalRule')) {
+    if (disabledSyntax.includes('horizontalRule')) {
       parser.disable('hr');
     }
 
     return parser;
   }
 
-  private registerLocalStyleContainer(parser: MarkdownIt, aliasMap: LocalStyleAliasMap): void {
-    parser.block.ruler.before('fence', 'local_style_container', (state, startLine, endLine, silent) => {
+  private registerLocalStyleContainer(parser: MarkdownIt): void {
+    const ruleHandler = (state: Parameters<Parameters<MarkdownIt['block']['ruler']['before']>[2]>[0], startLine: number, endLine: number, silent: boolean): boolean => {
       const startPos = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
       const maxPos = state.eMarks[startLine] ?? startPos;
       const firstLine = state.src.slice(startPos, maxPos).trim();
@@ -119,18 +116,27 @@ export class MarkdownParser {
       }
 
       const descriptor = firstLine.slice(3).trim();
-      const styleText = this.parseLocalStyleDescriptor(descriptor, aliasMap);
+      const styleText = this.parseMultiLocalStyleDescriptors(descriptor);
       if (!styleText) {
         return false;
       }
 
+      let nesting = 1;
       let nextLine = startLine + 1;
       while (nextLine < endLine) {
         const lineStart = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
         const lineEnd = state.eMarks[nextLine] ?? lineStart;
         const lineText = state.src.slice(lineStart, lineEnd).trim();
-        if (lineText === ':::') {
-          break;
+        if (lineText.startsWith(':::')) {
+          const innerDescriptor = lineText.slice(3).trim();
+          if (innerDescriptor) {
+            nesting += 1;
+          } else {
+            nesting -= 1;
+            if (nesting === 0) {
+              break;
+            }
+          }
         }
         nextLine += 1;
       }
@@ -156,10 +162,29 @@ export class MarkdownParser {
 
       state.line = nextLine + 1;
       return true;
-    });
+    };
+
+    parser.block.ruler.before('fence', 'local_style_container', ruleHandler, { alt: ['paragraph', 'reference', 'blockquote'] });
   }
 
-  private parseLocalStyleDescriptor(descriptor: string, aliasMap: LocalStyleAliasMap): string {
+  private parseMultiLocalStyleDescriptors(descriptor: string): string {
+    const segments = descriptor.split(/[;；]/).map((segment) => segment.trim()).filter(Boolean);
+    if (segments.length === 0) {
+      return '';
+    }
+
+    const declarations: string[] = [];
+    for (const segment of segments) {
+      const result = this.parseLocalStyleDescriptor(segment);
+      if (result) {
+        declarations.push(result);
+      }
+    }
+
+    return declarations.length > 0 ? declarations.join(' ') : '';
+  }
+
+  private parseLocalStyleDescriptor(descriptor: string): string {
     const separatorIndex = this.findDescriptorSeparatorIndex(descriptor);
     if (separatorIndex <= 0) {
       return '';
@@ -171,22 +196,18 @@ export class MarkdownParser {
       return '';
     }
 
-    const normalizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
-    if (!CSS_LENGTH_PATTERN.test(normalizedValue)) {
+    const normalizedValue = this.normalizeLocalStyleValue(rawValue);
+    if (!normalizedValue) {
       return '';
     }
 
-    const targetPath = this.resolveLocalStyleTargetPath(key, aliasMap);
+    const targetPath = this.resolveLocalStyleTargetPath(key);
     if (!targetPath) {
       return '';
     }
 
-    const cssVariables = LOCAL_STYLE_TARGET_TO_VARIABLES[targetPath];
-    if (!cssVariables || cssVariables.length === 0) {
-      return '';
-    }
-
-    return cssVariables.map((cssVariable) => `${cssVariable}: ${normalizedValue};`).join(' ');
+    const cssVariable = toCssCustomProperty(targetPath);
+    return `${cssVariable}: ${normalizedValue};`;
   }
 
   private findDescriptorSeparatorIndex(descriptor: string): number {
@@ -203,27 +224,93 @@ export class MarkdownParser {
     return Math.min(colonIndex, fullWidthColonIndex);
   }
 
-  private resolveLocalStyleTargetPath(key: string, aliasMap: LocalStyleAliasMap): LocalStyleTargetPath | null {
-    if (key in LOCAL_STYLE_TARGET_TO_VARIABLES) {
-      return key as LocalStyleTargetPath;
+  private normalizeLocalStyleValue(rawValue: string): string {
+    const sanitizedValue = sanitizeCssValue(rawValue);
+    if (!sanitizedValue) {
+      return '';
     }
 
-    const mergedAliasMap: LocalStyleAliasMap = {
-      ...DEFAULT_LOCAL_STYLE_ALIASES,
-      ...aliasMap
-    };
-    const aliasTarget = mergedAliasMap[key];
-    if (!aliasTarget) {
+    const firstChar = sanitizedValue[0];
+    const lastChar = sanitizedValue[sanitizedValue.length - 1];
+    const isQuoted = (firstChar === '\'' && lastChar === '\'') || (firstChar === '"' && lastChar === '"');
+    if (!isQuoted) {
+      return sanitizedValue;
+    }
+
+    return sanitizedValue.slice(1, -1).trim();
+  }
+
+  private resolveLocalStyleTargetPath(key: string): string | null {
+    const directPath = resolveCanonicalLocalStylePath(key);
+    if (directPath) {
+      return directPath;
+    }
+
+    const aliasMapping = this.options.localStyleAliases ?? {};
+    if (!Object.prototype.hasOwnProperty.call(aliasMapping, key)) {
       return null;
     }
 
-    return aliasTarget;
+    const aliasTarget = aliasMapping[key];
+    if (typeof aliasTarget !== 'string') {
+      return null;
+    }
+
+    return resolveCanonicalLocalStylePath(aliasTarget);
+  }
+
+  private registerTextFontScopes(parser: MarkdownIt): void {
+    const fallbackTextRenderer = parser.renderer.rules.text;
+
+    parser.renderer.rules.text = (tokens, index, options, env, self) => {
+      const defaultRenderer = fallbackTextRenderer ?? ((rawTokens, tokenIndex) => self.renderToken(rawTokens, tokenIndex, options));
+      const token = tokens[index];
+      if (!token || token.type !== 'text') {
+        return defaultRenderer(tokens, index, options, env, self);
+      }
+
+      const content = token.content ?? '';
+      if (!content) {
+        return '';
+      }
+
+      return this.wrapTextScopes(content, parser.utils.escapeHtml);
+    };
+  }
+
+  private wrapTextScopes(content: string, escapeHtml: (source: string) => string): string {
+    let cursor = 0;
+    let result = '';
+
+    content.replace(TEXT_TOKEN_PATTERN, (matched, offset) => {
+      if (offset > cursor) {
+        result += escapeHtml(content.slice(cursor, offset));
+      }
+
+      if (/^[A-Za-z0-9]+$/.test(matched)) {
+        result += `<span class="latin-text">${escapeHtml(matched)}</span>`;
+      } else if (/^[“”‘’]$/.test(matched)) {
+        result += `<span class="cn-quote">${escapeHtml(matched)}</span>`;
+      } else {
+        result += `<span class="cn-book-title">${escapeHtml(matched)}</span>`;
+      }
+
+      cursor = offset + matched.length;
+      return matched;
+    });
+
+    if (cursor < content.length) {
+      result += escapeHtml(content.slice(cursor));
+    }
+
+    return result;
   }
 
   private preprocessMarkdown(markdown: string): string {
     let normalized = markdown;
+    const disabledSyntax = this.getDisabledSyntax();
 
-    if (this.options.disabledSyntax.includes('codeBlock')) {
+    if (disabledSyntax.includes('codeBlock')) {
       normalized = normalized.replace(/```[\s\S]*?```/g, (block) => {
         return block
           .replace(/^```\w*\s*\n?/, '')
@@ -237,18 +324,60 @@ export class MarkdownParser {
     for (const line of lines) {
       let currentLine = line;
 
-      if (this.options.disabledSyntax.includes('blockquote')) {
+      if (disabledSyntax.includes('blockquote')) {
         currentLine = currentLine.replace(/^\s*>\s?/, '');
       }
 
-      if (this.options.disabledSyntax.includes('unorderedList')) {
+      if (disabledSyntax.includes('unorderedList')) {
         currentLine = currentLine.replace(/^\s*[-*+]\s+/, '');
       }
 
       outputLines.push(currentLine);
     }
 
+    if (this.options.enterStyle === 'paragraph') {
+      return this.normalizeSingleLineBreaks(outputLines);
+    }
+
     return outputLines.join('\n');
+  }
+
+  private normalizeSingleLineBreaks(lines: string[]): string {
+    const paragraphs: string[] = [];
+    let paragraphLines: string[] = [];
+
+    const flushParagraph = (): void => {
+      if (paragraphLines.length === 0) {
+        return;
+      }
+
+      const hasContent = paragraphLines.some((line) => line.trim().length > 0);
+      if (hasContent) {
+        paragraphs.push(paragraphLines.join('\n'));
+      }
+
+      paragraphLines = [];
+    };
+
+    for (const line of lines) {
+      if (line.trim().length === 0) {
+        flushParagraph();
+        paragraphs.push(EMPTY_PARAGRAPH_PLACEHOLDER);
+        continue;
+      }
+
+      if (MANUAL_BREAK_SUFFIX_PATTERN.test(line)) {
+        paragraphLines.push(line.replace(MANUAL_BREAK_SUFFIX_PATTERN, '  '));
+        continue;
+      }
+
+      paragraphLines.push(line);
+      flushParagraph();
+    }
+
+    flushParagraph();
+
+    return paragraphs.join('\n\n');
   }
 
   private applyHeadingNumbering(tokens: Token[], headingStyles?: Partial<Record<HeadingLevel, string | undefined>>): Token[] {
@@ -302,22 +431,25 @@ export class MarkdownParser {
       return '（{zhHansIndex}）';
     }
     if (level === 'h4') {
-      return '{romanIndex}．';
+      return '{arabicIndex}．';
     }
     return '';
   }
 
   private formatHeadingPrefix(currentIndex: number, style: string | undefined): string {
     const template = String(style ?? '').trim();
-    if (!template) {
+    if (!template || template === HEADING_INDEX_DISABLED_VALUE) {
       return '';
     }
 
     const placeholderValues: Record<NumberingPlaceholder, string> = {
-      '{number}': String(currentIndex),
-      '{zhHansIndex}': this.toZhHansIndex(currentIndex),
-      '{zhHantIndex}': this.toZhHantIndex(currentIndex),
-      '{romanIndex}': this.toRomanIndex(currentIndex)
+      '{number}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
+      '{arabicIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
+      '{zhHansIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHans'),
+      '{zhHantIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHant'),
+      '{romanIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman'),
+      '{romanUpperIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman'),
+      '{romanLowerIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman').toLowerCase()
     };
 
     let formatted = template;
@@ -334,59 +466,5 @@ export class MarkdownParser {
     }
 
     return `${template}${currentIndex}`;
-  }
-
-  private toZhHansIndex(index: number): string {
-    return this.toChineseIndex(index, ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], ['十', '百', '千']);
-  }
-
-  private toZhHantIndex(index: number): string {
-    return this.toChineseIndex(index, ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'], ['拾', '佰', '仟']);
-  }
-
-  private toRomanIndex(index: number): string {
-    return String(index);
-  }
-
-  private toChineseIndex(index: number, digits: string[], units: [string, string, string]): string {
-    if (index <= 0) {
-      return String(index);
-    }
-
-    if (index >= 10000) {
-      return String(index);
-    }
-
-    if (index < 10) {
-      return digits[index] ?? String(index);
-    }
-
-    const numberText = String(index);
-    const numbers = numberText.split('').map((char) => Number(char));
-    const length = numbers.length;
-    const zeroChar = digits[0] ?? '零';
-    let result = '';
-
-    for (let i = 0; i < length; i += 1) {
-      const digit = numbers[i] ?? 0;
-      const position = length - i - 1;
-
-      if (digit === 0) {
-        const hasNonZeroAfter = numbers.slice(i + 1).some((next) => next !== 0);
-        if (hasNonZeroAfter && result && !result.endsWith(zeroChar)) {
-          result += zeroChar;
-        }
-        continue;
-      }
-
-      if (position === 1 && digit === 1 && length === 2) {
-        result += units[0];
-        continue;
-      }
-
-      result += `${digits[digit] ?? String(digit)}${position > 0 ? units[position - 1] ?? '' : ''}`;
-    }
-
-    return result;
   }
 }

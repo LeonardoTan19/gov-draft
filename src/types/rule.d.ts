@@ -3,29 +3,32 @@
  */
 
 export type CssLengthUnit = 'mm' | 'cm' | 'in' | 'pt' | 'px' | 'em' | 'rem' | '%';
-export type CssLength = `${number}${CssLengthUnit}` | '0';
+export type CssLength = `${number}${CssLengthUnit}` | '0' | 0;
 export type CssColor = `#${string}` | `rgb(${string})` | `rgba(${string})` | `hsl(${string})` | `hsla(${string})`;
 export type CssLineHeight = `${number}` | CssLength;
-export type CssParagraphSpacing = CssLength | `${number}lines`;
+export type CssParagraphSpacing = CssLength | `${number}lines` | '';
 export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+export type NumberStyle = 'arabic' | 'roman' | 'zhHans' | 'zhHant';
 export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
-export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
-export type LocalStyleTargetPath =
-  | 'content.body.paragraph.indent'
-  | 'content.h1.paragraph.indent'
-  | 'content.h2.paragraph.indent'
-  | 'content.h3.paragraph.indent'
-  | 'content.h4.paragraph.indent';
+export type LocalStyleTargetPath = string;
+export type EnterStyle = 'paragraph' | 'lineBreak';
 
 export interface TextFontConfig {
-  family: string;
+  latinFamily: string;
+  cjkFamily: string;
+  cnQuoteFamily?: string;
+  cnBookTitleFamily?: string;
 }
 
 export interface TextStyleConfig {
   size: CssLength;
   weight: FontWeightValue;
-  color: CssColor;
+  colors: {
+    text: CssColor;
+    background: CssColor;
+  };
+  index?: string | null;
 }
 
 export interface ParagraphSpacingConfig {
@@ -44,42 +47,88 @@ export interface ContentItemConfig {
   fonts: TextFontConfig;
   style: TextStyleConfig;
   paragraph: ParagraphConfig;
-  numberingStyle?: string;
+}
+
+export interface H1ContentItemConfig extends ContentItemConfig {
+  sectionStyle?: string;
 }
 
 export interface ContentConfig {
   body: ContentItemConfig;
-  h1: ContentItemConfig;
+  h1: H1ContentItemConfig;
   h2: ContentItemConfig;
   h3: ContentItemConfig;
   h4: ContentItemConfig;
-}
-
-export interface ColorConfig {
-  text: CssColor;
-  background: CssColor;
-  accent: CssColor;
+  [level: string]: ContentItemConfig | H1ContentItemConfig;
 }
 
 export interface PageConfig {
-  size: 'A4' | 'A3' | 'Letter';
-  orientation: 'portrait' | 'landscape';
+  size?: string;
+  dimensions?: {
+    width: CssLength;
+    height: CssLength;
+  };
+  orientation?: 'portrait' | 'landscape';
   margins: {
     top: CssLength;
     right: CssLength;
     bottom: CssLength;
     left: CssLength;
   };
+  pagination?: {
+    enabled: boolean;
+  };
 }
+
+export type PaginationVerticalAnchor = 'top' | 'bottom';
+export type PaginationHorizontalAnchor = 'left' | 'center' | 'right' | 'outside' | 'inside';
+
+export interface PaginationPositionConfig {
+  vertical: {
+    anchor: PaginationVerticalAnchor;
+    offset: CssLength;
+  };
+  horizontal: {
+    anchor: PaginationHorizontalAnchor;
+    offset: CssLength;
+  };
+}
+
+export interface PaginationStyleConfig {
+  fonts: TextFontConfig;
+  size: CssLength;
+  weight: FontWeightValue;
+  colors: {
+    text: CssColor;
+  };
+}
+
+export interface PaginationConfig {
+  format: string;
+  numberStyle?: NumberStyle;
+  style: PaginationStyleConfig;
+  position: PaginationPositionConfig;
+}
+
+export interface SectionPaginationConfig {
+  page?: Partial<PageConfig>;
+  parser?: Partial<ParserConfig>;
+  pagination: PaginationConfig & {
+    enabled?: boolean;
+  };
+}
+
+export type PaginationSectionsConfig = Record<string, SectionPaginationConfig>;
 
 export interface ParserConfig {
   html?: boolean;
-  breaks?: boolean;
+  enterStyle?: EnterStyle;
   linkify?: boolean;
   typographer?: boolean;
-  headingNumbering: boolean;
-  disabledSyntax: DisabledSyntax[];
+  headingNumbering?: boolean;
+  disabledSyntax?: string[];
   localStyleAliases?: Record<string, LocalStyleTargetPath>;
+  [key: string]: unknown;
 }
 
 export interface StyleDeclaration {
@@ -108,8 +157,8 @@ export interface RuleConfig {
   version: string;
   description?: string;
   content: ContentConfig;
-  colors: ColorConfig;
   page: PageConfig;
+  paginationSections?: PaginationSectionsConfig;
   parser: ParserConfig;
 }
 
@@ -137,7 +186,7 @@ export interface Rule {
   version: string;
   description?: string;
   content: ContentConfig;
-  colors: ColorConfig;
   page: PageConfig;
+  paginationSections?: PaginationSectionsConfig;
   parser: ParserConfig;
 }
