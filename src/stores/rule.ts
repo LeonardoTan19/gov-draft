@@ -1,9 +1,20 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { sanitizeCssValue } from '../core/utils/css-sanitize-utils'
 import { ruleEngine } from '../core/rule-engine/rule-engine'
 import type { CompiledRule, RuleConfig } from '../types/rule'
 
-const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g
+const RESERVED_CUSTOM_STYLE_KEYS = new Set([
+  '--page-margins-top',
+  '--page-margins-right',
+  '--page-margins-bottom',
+  '--page-margins-left'
+])
+
+const RULE_STORAGE_KEY = 'gov-draft-rule-v2'
+const CUSTOM_STYLE_STORAGE_KEY = 'gov-draft-custom-styles-v2'
+const LEGACY_RULE_STORAGE_KEY = 'gov-draft-rule'
+const LEGACY_CUSTOM_STYLE_STORAGE_KEY = 'gov-draft-custom-styles'
 
 export const useRuleStore = defineStore('rule', () => {
   const currentRule = ref<RuleConfig | null>(null)
@@ -29,13 +40,21 @@ export const useRuleStore = defineStore('rule', () => {
   }
 
   function setCustomStyle(key: string, value: string): void {
+    const normalizedKey = key.startsWith('--') ? key : `--${key}`
+    if (RESERVED_CUSTOM_STYLE_KEYS.has(normalizedKey)) {
+      delete customStyles.value[key]
+      delete customStyles.value[normalizedKey]
+      saveCustomStylesToStorage()
+      return
+    }
+
     customStyles.value[key] = value
     saveCustomStylesToStorage()
   }
 
   function resetCustomStyles(): void {
     customStyles.value = {}
-    localStorage.removeItem('gov-draft-custom-styles')
+    localStorage.removeItem(CUSTOM_STYLE_STORAGE_KEY)
   }
 
   async function saveRule(rule: RuleConfig): Promise<void> {
@@ -60,7 +79,10 @@ export const useRuleStore = defineStore('rule', () => {
     availableRules.value = ruleEngine.getBuiltinRules()
 
     try {
-      const savedRule = localStorage.getItem('gov-draft-rule')
+      localStorage.removeItem(LEGACY_RULE_STORAGE_KEY)
+      localStorage.removeItem(LEGACY_CUSTOM_STYLE_STORAGE_KEY)
+
+      const savedRule = localStorage.getItem(RULE_STORAGE_KEY)
       if (savedRule) {
         const rule = JSON.parse(savedRule) as RuleConfig
         const builtinRule = availableRules.value.find((item) => item.name === rule.name)
@@ -76,9 +98,15 @@ export const useRuleStore = defineStore('rule', () => {
         }
       }
 
-      const savedCustomStyles = localStorage.getItem('gov-draft-custom-styles')
+      const savedCustomStyles = localStorage.getItem(CUSTOM_STYLE_STORAGE_KEY)
       if (savedCustomStyles) {
-        customStyles.value = JSON.parse(savedCustomStyles)
+        const parsedStyles = JSON.parse(savedCustomStyles) as unknown
+        const rawStyles = isStringRecord(parsedStyles) ? parsedStyles : {}
+        const { styles, changed } = stripReservedCustomStyles(rawStyles)
+        customStyles.value = styles
+        if (changed) {
+          saveCustomStylesToStorage()
+        }
       }
     } catch (error) {
       console.error('Failed to initialize rule:', error)
@@ -126,7 +154,7 @@ export const useRuleStore = defineStore('rule', () => {
 
   function saveRuleToStorage(rule: RuleConfig): void {
     try {
-      localStorage.setItem('gov-draft-rule', JSON.stringify(rule))
+      localStorage.setItem(RULE_STORAGE_KEY, JSON.stringify(rule))
     } catch (error) {
       console.error('Failed to save rule to storage:', error)
     }
@@ -134,7 +162,7 @@ export const useRuleStore = defineStore('rule', () => {
 
   function saveCustomStylesToStorage(): void {
     try {
-      localStorage.setItem('gov-draft-custom-styles', JSON.stringify(customStyles.value))
+      localStorage.setItem(CUSTOM_STYLE_STORAGE_KEY, JSON.stringify(customStyles.value))
     } catch (error) {
       console.error('Failed to save custom styles to storage:', error)
     }
@@ -143,9 +171,13 @@ export const useRuleStore = defineStore('rule', () => {
   function normalizeCustomStyles(input: Record<string, string>): Record<string, string> {
     return Object.entries(input).reduce<Record<string, string>>((acc, [key, value]) => {
       const normalizedKey = key.startsWith('--') ? key : `--${key}`
-      const normalizedValue = String(value ?? '').replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim()
+      const normalizedValue = sanitizeCssValue(value)
 
-      if (normalizedKey.length > 2 && normalizedValue.length > 0) {
+      if (
+        normalizedKey.length > 2 &&
+        normalizedValue.length > 0 &&
+        !RESERVED_CUSTOM_STYLE_KEYS.has(normalizedKey)
+      ) {
         acc[normalizedKey] = normalizedValue
       }
 
@@ -155,6 +187,33 @@ export const useRuleStore = defineStore('rule', () => {
 
   function isSameRule(left: RuleConfig, right: RuleConfig): boolean {
     return JSON.stringify(left) === JSON.stringify(right)
+  }
+
+  function stripReservedCustomStyles(styles: Record<string, string>): {
+    styles: Record<string, string>
+    changed: boolean
+  } {
+    let changed = false
+    const filtered = Object.entries(styles).reduce<Record<string, string>>((acc, [key, value]) => {
+      const normalizedKey = key.startsWith('--') ? key : `--${key}`
+      if (RESERVED_CUSTOM_STYLE_KEYS.has(normalizedKey)) {
+        changed = true
+        return acc
+      }
+
+      acc[key] = value
+      return acc
+    }, {})
+
+    return { styles: filtered, changed }
+  }
+
+  function isStringRecord(value: unknown): value is Record<string, string> {
+    if (!value || typeof value !== 'object') {
+      return false
+    }
+
+    return Object.values(value).every((item) => typeof item === 'string')
   }
 
   return {

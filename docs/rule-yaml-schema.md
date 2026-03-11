@@ -11,13 +11,15 @@ version: string
 description: string
 content:
   body: ContentItem
-  h1: ContentItem
+  h1: H1ContentItem
   h2: ContentItem
   h3: ContentItem
   h4: ContentItem
 page:
   size: A4 | A3 | Letter
   orientation: portrait | landscape
+  pagination:
+    enabled: boolean
   margins:
     top: CssLength
     right: CssLength
@@ -62,6 +64,12 @@ paragraph:
     after: CssParagraphSpacing
 ```
 
+`H1ContentItem` 在 `ContentItem` 基础上额外支持：
+
+```yaml
+sectionStyle: string            # 可选，页码 section 匹配键；默认 section
+```
+
 ## 3. CSS 变量命名规则（自动生成）
 
 规则：将 YAML 路径转为 CSS 自定义属性。
@@ -96,6 +104,21 @@ paragraph:
 :::
 ```
 
+若配置 `parser.localStyleAliases`，则局部样式支持别名写法：
+
+```markdown
+::: bodyIndent: 0em
+正文
+:::
+```
+
+其中 `bodyIndent` 由 `parser.localStyleAliases.bodyIndent` 映射到标准路径（如 `content.body.paragraph.indent`）。
+
+解析顺序为：
+1. 优先按标准路径（含可省略 `content.` 前缀）解析；
+2. 标准路径不匹配时，再按 `localStyleAliases` 做一次映射；
+3. 映射结果仍需通过 `content.*` 范围与安全字段校验。
+
 ## 5. 安全与格式约束
 
 `localStyleAliases` 的目标路径需满足：
@@ -106,9 +129,49 @@ paragraph:
 
 补充约定：
 - `style.index` 为空（`index:`）或缺省时，等价为 `0lines`（不添加编号前缀）；
+- `style.index` 支持占位符：
+  - `{number}` / `{arabicIndex}`：阿拉伯数字（1, 2, 3...）；
+  - `{zhHansIndex}`：中文小写数字（一、二、三...）；
+  - `{zhHantIndex}`：中文大写数字（壹、贰、叁...）；
+  - `{romanIndex}` / `{romanUpperIndex}`：罗马数字大写（I, II, III...）；
+  - `{romanLowerIndex}`：罗马数字小写（i, ii, iii...）；
 - 颜色值可写为 `#ff0000` 或 `'#ff0000'`，解析时会去掉外层引号。
 
 ## 6. 兼容策略
 
 - 旧写法（如 `indent`、`bodyIndent`、`--font-heading-h1-indent`）**不再内置兼容**；
 - 请统一迁移到规范路径与新变量命名（`--content-...`）。
+
+## 7. 页码配置（独立 YAML）
+
+页码是否启用由主规则中的 `page.pagination.enabled` 控制；页码详细设置放在独立 YAML（内置为 `src/core/builtin-rules/gb-t-9704-pagination.yaml`），支持多 section：
+
+```yaml
+section:
+  pagination:
+    format: '— {currentPage} / {totalPage} —'
+    numberStyle: arabic
+    style:
+      fonts:
+        latinFamily: Times New Roman, serif
+        cjkFamily: 仿宋_GB2312, FangSong, STFangsong, serif
+      size: 14pt
+      weight: 400
+      colors:
+        text: '#000000'
+    position:
+      vertical:
+        anchor: bottom
+        offset: 7mm
+      horizontal:
+        anchor: center
+        offset: 0mm
+```
+
+说明：
+- section 键名格式为 `section` 或 `section1`、`section2`...。
+- 页码配置优先使用 `content.h1.sectionStyle` 进行匹配；未指定时默认匹配 `section`。
+- `format` 支持变量：`{currentPage}`、`{CurrentPage}`、`{totalPage}`、`{TotalPage}`。
+- `{}` 内支持简单四则运算，例如 `{currentPage-1}`、`{CurrentPage/TotalPage}`。
+- `numberStyle` 支持 `arabic | roman | zhHans | zhHant`，用于变量/表达式结果的数字显示风格。
+- `position.horizontal.anchor` 支持 `left|center|right|outside|inside`，`outside/inside` 按奇偶页自动切换。

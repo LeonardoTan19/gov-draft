@@ -2,15 +2,21 @@ import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import type { HeadingLevel, ParserConfig } from '../../types/rule';
 import { toCssCustomProperty } from '../rule-engine/css-variable';
+import { sanitizeCssValue } from '../utils/css-sanitize-utils';
+import { resolveCanonicalLocalStylePath } from '../utils/local-style-path-utils';
+import { NumberFormatUtils } from '../utils/number-format-utils';
 
 export type MarkdownOptions = ParserConfig;
 
-type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
+type NumberingPlaceholder =
+  | '{number}'
+  | '{arabicIndex}'
+  | '{zhHansIndex}'
+  | '{zhHantIndex}'
+  | '{romanIndex}'
+  | '{romanUpperIndex}'
+  | '{romanLowerIndex}';
 
-const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
-const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
-const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
-const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
 const HEADING_INDEX_DISABLED_VALUE = '0lines';
 const MANUAL_BREAK_SUFFIX_PATTERN = /\s*\/\/\s*$/;
@@ -29,6 +35,10 @@ const defaultOptions: MarkdownOptions = {
 export class MarkdownParser {
   private md: MarkdownIt;
   private options: MarkdownOptions;
+
+  private getDisabledSyntax(): string[] {
+    return Array.isArray(this.options.disabledSyntax) ? this.options.disabledSyntax : [];
+  }
 
   constructor(options: Partial<MarkdownOptions> = {}) {
     this.options = {
@@ -77,17 +87,18 @@ export class MarkdownParser {
       linkify: options.linkify,
       typographer: options.typographer
     });
+    const disabledSyntax = Array.isArray(options.disabledSyntax) ? options.disabledSyntax : [];
 
     this.registerLocalStyleContainer(parser);
     this.registerTextFontScopes(parser);
 
-    if (options.disabledSyntax.includes('codeBlock')) {
+    if (disabledSyntax.includes('codeBlock')) {
       parser.disable(['fence', 'code']);
     }
-    if (options.disabledSyntax.includes('blockquote')) {
+    if (disabledSyntax.includes('blockquote')) {
       parser.disable('blockquote');
     }
-    if (options.disabledSyntax.includes('horizontalRule')) {
+    if (disabledSyntax.includes('horizontalRule')) {
       parser.disable('hr');
     }
 
@@ -214,7 +225,7 @@ export class MarkdownParser {
   }
 
   private normalizeLocalStyleValue(rawValue: string): string {
-    const sanitizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
+    const sanitizedValue = sanitizeCssValue(rawValue);
     if (!sanitizedValue) {
       return '';
     }
@@ -230,34 +241,22 @@ export class MarkdownParser {
   }
 
   private resolveLocalStyleTargetPath(key: string): string | null {
-    const normalizedKey = key.trim();
-
-    if (this.isOverridablePath(normalizedKey)) {
-      return normalizedKey;
+    const directPath = resolveCanonicalLocalStylePath(key);
+    if (directPath) {
+      return directPath;
     }
 
-    if (normalizedKey.includes('.')) {
-      const canonicalPath = `${LOCAL_STYLE_SCOPE_PREFIX}${normalizedKey}`;
-      if (this.isOverridablePath(canonicalPath)) {
-        return canonicalPath;
-      }
+    const aliasMapping = this.options.localStyleAliases ?? {};
+    if (!Object.prototype.hasOwnProperty.call(aliasMapping, key)) {
+      return null;
     }
 
-    return null;
-  }
-
-  private isOverridablePath(path: string): boolean {
-    if (!path.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
-      return false;
+    const aliasTarget = aliasMapping[key];
+    if (typeof aliasTarget !== 'string') {
+      return null;
     }
 
-    if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(path)) {
-      return false;
-    }
-
-    return !path
-      .split('.')
-      .some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
+    return resolveCanonicalLocalStylePath(aliasTarget);
   }
 
   private registerTextFontScopes(parser: MarkdownIt): void {
@@ -309,8 +308,9 @@ export class MarkdownParser {
 
   private preprocessMarkdown(markdown: string): string {
     let normalized = markdown;
+    const disabledSyntax = this.getDisabledSyntax();
 
-    if (this.options.disabledSyntax.includes('codeBlock')) {
+    if (disabledSyntax.includes('codeBlock')) {
       normalized = normalized.replace(/```[\s\S]*?```/g, (block) => {
         return block
           .replace(/^```\w*\s*\n?/, '')
@@ -324,11 +324,11 @@ export class MarkdownParser {
     for (const line of lines) {
       let currentLine = line;
 
-      if (this.options.disabledSyntax.includes('blockquote')) {
+      if (disabledSyntax.includes('blockquote')) {
         currentLine = currentLine.replace(/^\s*>\s?/, '');
       }
 
-      if (this.options.disabledSyntax.includes('unorderedList')) {
+      if (disabledSyntax.includes('unorderedList')) {
         currentLine = currentLine.replace(/^\s*[-*+]\s+/, '');
       }
 
@@ -431,7 +431,7 @@ export class MarkdownParser {
       return '（{zhHansIndex}）';
     }
     if (level === 'h4') {
-      return '{romanIndex}．';
+      return '{arabicIndex}．';
     }
     return '';
   }
@@ -443,10 +443,13 @@ export class MarkdownParser {
     }
 
     const placeholderValues: Record<NumberingPlaceholder, string> = {
-      '{number}': String(currentIndex),
-      '{zhHansIndex}': this.toZhHansIndex(currentIndex),
-      '{zhHantIndex}': this.toZhHantIndex(currentIndex),
-      '{romanIndex}': this.toRomanIndex(currentIndex)
+      '{number}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
+      '{arabicIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'arabic'),
+      '{zhHansIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHans'),
+      '{zhHantIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'zhHant'),
+      '{romanIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman'),
+      '{romanUpperIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman'),
+      '{romanLowerIndex}': NumberFormatUtils.formatByStyle(currentIndex, 'roman').toLowerCase()
     };
 
     let formatted = template;
@@ -463,59 +466,5 @@ export class MarkdownParser {
     }
 
     return `${template}${currentIndex}`;
-  }
-
-  private toZhHansIndex(index: number): string {
-    return this.toChineseIndex(index, ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], ['十', '百', '千']);
-  }
-
-  private toZhHantIndex(index: number): string {
-    return this.toChineseIndex(index, ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'], ['拾', '佰', '仟']);
-  }
-
-  private toRomanIndex(index: number): string {
-    return String(index);
-  }
-
-  private toChineseIndex(index: number, digits: string[], units: [string, string, string]): string {
-    if (index <= 0) {
-      return String(index);
-    }
-
-    if (index >= 10000) {
-      return String(index);
-    }
-
-    if (index < 10) {
-      return digits[index] ?? String(index);
-    }
-
-    const numberText = String(index);
-    const numbers = numberText.split('').map((char) => Number(char));
-    const length = numbers.length;
-    const zeroChar = digits[0] ?? '零';
-    let result = '';
-
-    for (let i = 0; i < length; i += 1) {
-      const digit = numbers[i] ?? 0;
-      const position = length - i - 1;
-
-      if (digit === 0) {
-        const hasNonZeroAfter = numbers.slice(i + 1).some((next) => next !== 0);
-        if (hasNonZeroAfter && result && !result.endsWith(zeroChar)) {
-          result += zeroChar;
-        }
-        continue;
-      }
-
-      if (position === 1 && digit === 1 && length === 2) {
-        result += units[0];
-        continue;
-      }
-
-      result += `${digits[digit] ?? String(digit)}${position > 0 ? units[position - 1] ?? '' : ''}`;
-    }
-
-    return result;
   }
 }

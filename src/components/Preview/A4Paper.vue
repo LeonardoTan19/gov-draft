@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { usePaginator } from '../../composables/usePaginator'
+import { usePaginator, type PageRenderMeta } from '../../composables/usePaginator'
+import { getPaginationInlineStyle, getPaginationText } from '../../composables/usePaginationDisplay'
 import { useRuleStore } from '../../stores/rule'
 
 const props = defineProps<{
@@ -11,7 +12,7 @@ const ruleStore = useRuleStore()
 const measureContentRef = ref<HTMLElement | null>(null)
 const stageRef = ref<HTMLElement | null>(null)
 const previewScale = ref(1)
-const { pages, paginate } = usePaginator()
+const { pages, pageMetas, paginate } = usePaginator()
 let stageResizeObserver: ResizeObserver | null = null
 
 const dragState = {
@@ -23,9 +24,34 @@ const dragState = {
 }
 
 const styleFingerprint = computed(() => ruleStore.getRuleCssText)
+const paginationFingerprint = computed(() => JSON.stringify({
+  page: ruleStore.currentRule?.page,
+  paginationSections: ruleStore.currentRule?.paginationSections,
+  h1SectionStyle: ruleStore.currentRule?.content?.h1?.sectionStyle
+}))
+const paginationEnabled = computed(() => ruleStore.currentRule?.page.pagination?.enabled === true)
 const stageStyle = computed(() => ({
   '--preview-scale': `${previewScale.value}`
 }))
+
+const isPaginationVisible = (meta: PageRenderMeta): boolean => paginationEnabled.value && Boolean(meta.pagination)
+
+const getPageMetaByIndex = (index: number): PageRenderMeta => {
+  const existing = pageMetas.value[index]
+  if (existing) {
+    return existing
+  }
+
+  return {
+    sectionIndex: 1,
+    sectionKey: 'section',
+    sectionPage: index + 1,
+    sectionTotal: pages.value.length,
+    globalPage: index + 1,
+    globalTotal: pages.value.length,
+    pagination: null
+  }
+}
 
 const repaginate = async (): Promise<void> => {
 	await paginate(props.html, measureContentRef.value)
@@ -65,7 +91,7 @@ const updatePreviewScale = () => {
 
 const handleResize = () => {
   updatePreviewScale()
-  requestRepaginate()
+  centerStageOnSmallScreen()
 }
 
 const centerStageOnSmallScreen = () => {
@@ -171,6 +197,12 @@ watch(
 )
 
 watch(styleFingerprint, () => {
+  updatePreviewScale()
+  requestRepaginate()
+})
+
+watch(paginationFingerprint, () => {
+  updatePreviewScale()
   requestRepaginate()
 })
 </script>
@@ -191,8 +223,16 @@ watch(styleFingerprint, () => {
         :key="index"
         :data-page-index="index + 1"
         class="paper-sheet paper-page preview-content"
-        v-html="pageHtml"
-      />
+      >
+        <div v-html="pageHtml" />
+        <div
+          v-if="isPaginationVisible(getPageMetaByIndex(index))"
+          class="paper-pagination"
+          :style="getPaginationInlineStyle(getPageMetaByIndex(index), index)"
+        >
+          {{ getPaginationText(getPageMetaByIndex(index)) }}
+        </div>
+      </article>
     </div>
   </div>
 

@@ -6,14 +6,10 @@
 
 import { useDocumentStore } from '../stores/doc'
 import { useRuleStore } from '../stores/rule'
+import { cssLengthToPx, resolvePageDimensions } from '../core/utils/page-metrics-utils'
+import type { CssLength } from '../types/rule'
 
-type PageSizeType = 'A4' | 'A3' | 'Letter'
-
-const PAGE_SIZE_IN_MM: Record<PageSizeType, [number, number]> = {
-  A4: [210, 297],
-  A3: [297, 420],
-  Letter: [216, 279]
-}
+const MM_PER_PX = 25.4 / 96
 
 /**
  * useFileSystem 组合式函数
@@ -113,11 +109,10 @@ export function useFileSystem() {
       ])
 
       const pageConfig = ruleStore.currentRule?.page
-      const size = pageConfig?.size ?? 'A4'
       const orientation = pageConfig?.orientation ?? 'portrait'
-      const [baseWidth, baseHeight] = PAGE_SIZE_IN_MM[size]
-      const width = orientation === 'portrait' ? baseWidth : baseHeight
-      const height = orientation === 'portrait' ? baseHeight : baseWidth
+      const dimensions = resolvePageDimensions(pageConfig?.size, orientation, pageConfig?.dimensions)
+      const width = cssLengthToPx(dimensions.width as CssLength) * MM_PER_PX
+      const height = cssLengthToPx(dimensions.height as CssLength) * MM_PER_PX
 
       const pdf = new jsPDF({
         unit: 'mm',
