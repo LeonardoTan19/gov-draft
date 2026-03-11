@@ -70,12 +70,37 @@ function isOverflowing(el: HTMLElement): boolean {
 }
 
 function isH1Block(block: string): boolean {
-  return /^<h1(\s|>)/.test(block.trim())
+  return /<h1(\s|>)/.test(block)
+}
+
+function extractDynamicSectionKey(block: string): string | null {
+  if (!/local-style-container/.test(block)) {
+    return null
+  }
+
+  const styleAttrMatch = block.match(/style="([^"]*)"/)
+  if (!styleAttrMatch) {
+    return null
+  }
+
+  const dynamicSectionMatch = styleAttrMatch[1]?.match(/--content-h1-section-style\s*:\s*([^;]+)/)
+  const dynamicSectionKey = dynamicSectionMatch?.[1]?.trim()
+  return dynamicSectionKey && dynamicSectionKey.length > 0 ? dynamicSectionKey : null
+}
+
+function resolveSectionKeyForBlock(block: string, baseSectionKey: string, sectionIndex: number): string {
+  const dynamicSectionKey = extractDynamicSectionKey(block)
+  if (dynamicSectionKey) {
+    return dynamicSectionKey
+  }
+
+  return buildSectionKey(baseSectionKey, sectionIndex)
 }
 
 interface RawPageEntry {
   html: string
   sectionIndex: number
+  sectionKey: string
 }
 
 export interface PageRenderMeta {
@@ -108,6 +133,38 @@ function resolveSectionPaginationConfig(
   return sectionConfig.pagination
 }
 
+function resolveSectionPageConfig(
+  sectionKey: string,
+  paginationSections: PaginationSectionsConfig | undefined,
+  basePageConfig: RuleConfig['page']
+): RuleConfig['page'] {
+  const sectionPage = paginationSections?.[sectionKey]?.page
+  if (!sectionPage) {
+    return basePageConfig
+  }
+
+  const mergedMargins = {
+    top: sectionPage.margins?.top ?? basePageConfig.margins.top,
+    right: sectionPage.margins?.right ?? basePageConfig.margins.right,
+    bottom: sectionPage.margins?.bottom ?? basePageConfig.margins.bottom,
+    left: sectionPage.margins?.left ?? basePageConfig.margins.left
+  }
+
+  return {
+    ...basePageConfig,
+    ...sectionPage,
+    margins: mergedMargins
+  }
+}
+
+function buildSectionKey(baseSectionKey: string, sectionIndex: number): string {
+  if (sectionIndex <= 1) {
+    return baseSectionKey
+  }
+
+  return `${baseSectionKey}${sectionIndex}`
+}
+
 function resolveH1SectionStyle(rule: RuleConfig | null): string {
   const sectionStyle = rule?.content.h1.sectionStyle
   if (typeof sectionStyle !== 'string') {
@@ -120,8 +177,7 @@ function resolveH1SectionStyle(rule: RuleConfig | null): string {
 
 function buildPageMeta(
   entries: RawPageEntry[],
-  paginationSections: PaginationSectionsConfig | undefined,
-  sectionKey: string
+  paginationSections: PaginationSectionsConfig | undefined
 ): PageRenderMeta[] {
   const sectionTotalMap = entries.reduce<Record<number, number>>((acc, entry) => {
     acc[entry.sectionIndex] = (acc[entry.sectionIndex] ?? 0) + 1
@@ -137,12 +193,12 @@ function buildPageMeta(
 
     return {
       sectionIndex: entry.sectionIndex,
-      sectionKey,
+      sectionKey: entry.sectionKey,
       sectionPage: nextSectionPage,
       sectionTotal: sectionTotalMap[entry.sectionIndex] ?? 1,
       globalPage: index + 1,
       globalTotal,
-      pagination: resolveSectionPaginationConfig(sectionKey, paginationSections)
+      pagination: resolveSectionPaginationConfig(entry.sectionKey, paginationSections)
     }
   })
 }
@@ -178,9 +234,11 @@ export function usePaginator() {
     isPaginating.value = true
 
     try {
-      const sectionKey = resolveH1SectionStyle(ruleStore.currentRule)
-      const pageHeight = getPageHeight()
-      measureContent.style.height = `${pageHeight}px`
+      const baseSectionKey = resolveH1SectionStyle(ruleStore.currentRule)
+      let currentSectionKey = buildSectionKey(baseSectionKey, 1)
+      measureContent.style.display = 'flow-root'
+      measureContent.style.overflow = 'hidden'
+      measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
 
       const blocks = collectBlocks(html)
       if (blocks.length === 0) {
@@ -188,12 +246,12 @@ export function usePaginator() {
         pageMetas.value = [
           {
             sectionIndex: 1,
-            sectionKey,
+            sectionKey: currentSectionKey,
             sectionPage: 1,
             sectionTotal: 1,
             globalPage: 1,
             globalTotal: 1,
-            pagination: resolveSectionPaginationConfig(sectionKey, ruleStore.currentRule?.paginationSections)
+            pagination: resolveSectionPaginationConfig(currentSectionKey, ruleStore.currentRule?.paginationSections)
           }
         ]
         pageCount.value = 1
@@ -210,11 +268,18 @@ export function usePaginator() {
       for (const block of blocks) {
         const blockStartsNewSection = isH1Block(block)
 
+        if (blockStartsNewSection && currentPageHtml.length === 0) {
+          currentSectionKey = resolveSectionKeyForBlock(block, baseSectionKey, currentSectionIndex)
+          measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
+        }
+
         if (blockStartsNewSection && currentPageHtml.length > 0) {
           result.push(currentPageHtml)
-          entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex })
+          entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
           currentPageHtml = ''
           currentSectionIndex += 1
+          currentSectionKey = resolveSectionKeyForBlock(block, baseSectionKey, currentSectionIndex)
+          measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
         }
 
         const candidateHtml = `${currentPageHtml}${block}`
@@ -227,34 +292,34 @@ export function usePaginator() {
 
         if (currentPageHtml.length === 0) {
           result.push(block)
-          entries.push({ html: block, sectionIndex: currentSectionIndex })
+          entries.push({ html: block, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
           measureContent.innerHTML = ''
           continue
         }
 
         result.push(currentPageHtml)
-        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex })
+        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
         currentPageHtml = block
         measureContent.innerHTML = currentPageHtml
       }
 
       if (currentPageHtml.length > 0) {
         result.push(currentPageHtml)
-        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex })
+        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
       }
 
       pages.value = result.length > 0 ? result : ['']
       pageMetas.value = entries.length > 0
-        ? buildPageMeta(entries, ruleStore.currentRule?.paginationSections, sectionKey)
+        ? buildPageMeta(entries, ruleStore.currentRule?.paginationSections)
         : [
             {
               sectionIndex: 1,
-              sectionKey,
+              sectionKey: currentSectionKey,
               sectionPage: 1,
               sectionTotal: 1,
               globalPage: 1,
               globalTotal: 1,
-              pagination: resolveSectionPaginationConfig(sectionKey, ruleStore.currentRule?.paginationSections)
+              pagination: resolveSectionPaginationConfig(currentSectionKey, ruleStore.currentRule?.paginationSections)
             }
           ]
       pageCount.value = pages.value.length
@@ -307,9 +372,13 @@ export function usePaginator() {
    * 获取页面内容区高度（A4 纸张高度减去上下边距）
    * @returns 页面内容区高度（像素）
    */
-  const getPageHeight = (): number => {
-    const pageConfig = ruleStore.currentRule?.page ?? DEFAULT_PAGE_CONFIG
-    return getPageContentHeightPx(pageConfig)
+  const getPageHeight = (sectionKey?: string): number => {
+    const basePageConfig = ruleStore.currentRule?.page ?? DEFAULT_PAGE_CONFIG
+    const resolvedPageConfig = sectionKey
+      ? resolveSectionPageConfig(sectionKey, ruleStore.currentRule?.paginationSections, basePageConfig)
+      : basePageConfig
+
+    return getPageContentHeightPx(resolvedPageConfig)
   }
 
   const scrollToPage = (page: number): void => {

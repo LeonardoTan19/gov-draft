@@ -16,6 +16,7 @@ import { useRuleStore } from '../stores/rule'
 export function useStyleInjector() {
   const ruleStore = useRuleStore()
   const injectedStyleIds = new Set<string>()
+  const injectorInstanceId = `style-injector-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
   /**
    * 注入样式到 DOM
@@ -35,11 +36,13 @@ export function useStyleInjector() {
     if (styleElement) {
       // 更新现有样式
       styleElement.textContent = styles
+      styleElement.dataset.injectorOwner = injectorInstanceId
     } else {
       // 创建新的样式标签
       styleElement = document.createElement('style')
       styleElement.id = styleId
       styleElement.textContent = styles
+      styleElement.dataset.injectorOwner = injectorInstanceId
       
       // 插入到 head 末尾，确保优先级高于默认样式
       document.head.appendChild(styleElement)
@@ -69,7 +72,7 @@ export function useStyleInjector() {
    */
   const removeStyles = (id: string): void => {
     const styleElement = document.getElementById(id)
-    if (styleElement) {
+    if (styleElement && styleElement.dataset.injectorOwner === injectorInstanceId) {
       styleElement.remove()
       injectedStyleIds.delete(id)
     }
@@ -81,7 +84,7 @@ export function useStyleInjector() {
   const clearAllStyles = (): void => {
     injectedStyleIds.forEach(id => {
       const styleElement = document.getElementById(id)
-      if (styleElement) {
+      if (styleElement && styleElement.dataset.injectorOwner === injectorInstanceId) {
         styleElement.remove()
       }
     })
