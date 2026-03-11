@@ -1,0 +1,82 @@
+import { describe, expect, it } from 'vitest'
+import { validateRule } from '../validator'
+import { createValidRule } from './fixtures'
+
+describe('validateRule', () => {
+  it('returns invalid when input is null', () => {
+    const result = validateRule(null)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('rule: 标准配置不能为空')
+  })
+
+  it('returns invalid when parser and typed fields are malformed', () => {
+    const invalidRule = createValidRule() as unknown as Record<string, unknown>
+    invalidRule.parser = {
+      headingNumbering: 'true',
+      disabledSyntax: ['codeBlock', 'badSyntax'],
+      localStyleAliases: {
+        bodyIndent: 'content.body.badField'
+      }
+    }
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        'parser.headingNumbering: 必须是布尔值',
+        'parser.disabledSyntax.1: 包含非法语法项',
+        'parser.localStyleAliases.bodyIndent: 目标路径非法'
+      ])
+    )
+  })
+
+  it('returns invalid when content/page fields have wrong types', () => {
+    const invalidRule = createValidRule() as unknown as Record<string, unknown>
+    invalidRule.content = {
+      ...createValidRule().content,
+      body: {
+        ...createValidRule().content.body,
+        style: {
+          size: '16pt',
+          weight: 450,
+          color: '#000000'
+        },
+        paragraph: {
+          align: 'middle',
+          indent: 'foo',
+          spacing: {
+            lineHeight: 'bad-line-height',
+            before: 'foo',
+            after: '0'
+          }
+        }
+      }
+    }
+    invalidRule.page = {
+      size: 'A5',
+      orientation: 'horizontal',
+      margins: { top: '37mm', right: '26mm', bottom: '35mm', left: '28mm' }
+    }
+
+    const result = validateRule(invalidRule)
+    expect(result.valid).toBe(false)
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        'content.body.style.weight: 必须是 100-900 之间的百位数字',
+        'content.body.paragraph.align: 必须是 left/center/right/justify 之一',
+        'content.body.paragraph.indent: 必须是合法长度值（例如 16pt、37mm、2em、0）',
+        'content.body.paragraph.spacing.lineHeight: 必须是合法行高值（数字或长度值）',
+        'content.body.paragraph.spacing.before: 必须是合法段间距（支持长度值、0、或 Nlines）',
+        'page.size: 必须是以下值之一: A4, A3, Letter',
+        'page.orientation: 必须是以下值之一: portrait, landscape'
+      ])
+    )
+  })
+
+  it('returns valid for builtin rule config', () => {
+    const validRule = createValidRule()
+    const result = validateRule(validRule)
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+})
