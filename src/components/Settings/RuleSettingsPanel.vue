@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { RuleConfig } from '../../types/rule'
 import { useRuleStore } from '../../stores/rule'
 import {
@@ -20,6 +21,7 @@ const emit = defineEmits<{
 }>()
 
 const ruleStore = useRuleStore()
+const { t } = useI18n()
 const sourceRule = ref<RuleConfig | null>(null)
 const form = ref<RuleSettingsFormModel | null>(null)
 const errorMessage = ref('')
@@ -109,8 +111,8 @@ const saveSettings = async (): Promise<void> => {
     await ruleStore.saveRule(nextRule)
     ruleStore.loadRule(nextRule)
     emit('close')
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '保存失败，请检查输入格式'
+  } catch {
+    errorMessage.value = t('settings.saveFailed')
   } finally {
     saving.value = false
   }
@@ -123,18 +125,18 @@ const saveSettings = async (): Promise<void> => {
     class="settings-panel"
     role="dialog"
     aria-modal="true"
-    aria-label="规则配置"
+    :aria-label="t('settings.dialogAria')"
   >
     <div class="settings-panel__header">
       <h2 class="settings-panel__title">
-        配置中心
+        {{ t('settings.title') }}
       </h2>
       <button
         class="btn btn--ghost"
         type="button"
         @click="closePanel"
       >
-        关闭
+        {{ t('settings.close') }}
       </button>
     </div>
 
@@ -144,10 +146,10 @@ const saveSettings = async (): Promise<void> => {
     >
       <section class="settings-block">
         <h3 class="settings-block__title">
-          基础
+          {{ t('settings.basic') }}
         </h3>
         <label class="settings-field">
-          <span>标准名称</span>
+          <span>{{ t('settings.ruleName') }}</span>
           <input
             v-model="form.name"
             class="settings-input"
@@ -155,7 +157,7 @@ const saveSettings = async (): Promise<void> => {
           >
         </label>
         <label class="settings-field">
-          <span>版本</span>
+          <span>{{ t('settings.version') }}</span>
           <input
             v-model="form.version"
             class="settings-input"
@@ -166,18 +168,18 @@ const saveSettings = async (): Promise<void> => {
 
       <section class="settings-block">
         <h3 class="settings-block__title">
-          Parser
+          {{ t('settings.parser') }}
         </h3>
         <label class="settings-field settings-field--inline">
           <input
             v-model="form.parser.headingNumbering"
             type="checkbox"
           >
-          <span>标题编号</span>
+          <span>{{ t('settings.headingNumbering') }}</span>
         </label>
 
         <label class="settings-field">
-          <span>换行策略</span>
+          <span>{{ t('settings.enterStyle') }}</span>
           <select
             v-model="form.parser.enterStyle"
             class="settings-input"
@@ -196,7 +198,7 @@ const saveSettings = async (): Promise<void> => {
             v-model="form.parser.linkify"
             type="checkbox"
           >
-          <span>自动链接</span>
+          <span>{{ t('settings.linkify') }}</span>
         </label>
 
         <label class="settings-field settings-field--inline">
@@ -204,11 +206,11 @@ const saveSettings = async (): Promise<void> => {
             v-model="form.parser.typographer"
             type="checkbox"
           >
-          <span>排版增强</span>
+          <span>{{ t('settings.typographer') }}</span>
         </label>
 
         <label class="settings-field">
-          <span>禁用语法（逗号分隔）</span>
+          <span>{{ t('settings.disabledSyntax') }}</span>
           <input
             v-model="form.parser.disabledSyntax"
             class="settings-input"
@@ -219,18 +221,18 @@ const saveSettings = async (): Promise<void> => {
 
       <section class="settings-block">
         <h3 class="settings-block__title">
-          Page
+          {{ t('settings.page') }}
         </h3>
         <label class="settings-field settings-field--inline">
           <input
             v-model="form.page.paginationEnabled"
             type="checkbox"
           >
-          <span>启用分页</span>
+          <span>{{ t('settings.enablePagination') }}</span>
         </label>
 
         <label class="settings-field">
-          <span>尺寸标识（size）</span>
+          <span>{{ t('settings.size') }}</span>
           <input
             v-model="form.page.size"
             class="settings-input"
@@ -239,7 +241,7 @@ const saveSettings = async (): Promise<void> => {
         </label>
 
         <label class="settings-field">
-          <span>方向</span>
+          <span>{{ t('settings.orientation') }}</span>
           <select
             v-model="form.page.orientation"
             class="settings-input"
@@ -254,22 +256,22 @@ const saveSettings = async (): Promise<void> => {
         </label>
 
         <div class="settings-grid">
-          <label class="settings-field"><span>上边距</span><input
+          <label class="settings-field"><span>{{ t('settings.marginTop') }}</span><input
             v-model="form.page.margins.top"
             class="settings-input"
             type="text"
           ></label>
-          <label class="settings-field"><span>右边距</span><input
+          <label class="settings-field"><span>{{ t('settings.marginRight') }}</span><input
             v-model="form.page.margins.right"
             class="settings-input"
             type="text"
           ></label>
-          <label class="settings-field"><span>下边距</span><input
+          <label class="settings-field"><span>{{ t('settings.marginBottom') }}</span><input
             v-model="form.page.margins.bottom"
             class="settings-input"
             type="text"
           ></label>
-          <label class="settings-field"><span>左边距</span><input
+          <label class="settings-field"><span>{{ t('settings.marginLeft') }}</span><input
             v-model="form.page.margins.left"
             class="settings-input"
             type="text"
@@ -280,14 +282,14 @@ const saveSettings = async (): Promise<void> => {
       <section class="settings-block">
         <div class="settings-block__title-row">
           <h3 class="settings-block__title">
-            Content Levels
+            {{ t('settings.contentLevels') }}
           </h3>
           <button
             class="btn btn--secondary"
             type="button"
             @click="addContentLevel"
           >
-            新增 Level
+            {{ t('settings.addLevel') }}
           </button>
         </div>
 
@@ -298,7 +300,7 @@ const saveSettings = async (): Promise<void> => {
         >
           <div class="settings-subblock__header">
             <label class="settings-field">
-              <span>Level Key</span>
+              <span>{{ t('settings.levelKey') }}</span>
               <input
                 v-model="level.key"
                 class="settings-input"
@@ -311,27 +313,27 @@ const saveSettings = async (): Promise<void> => {
               :disabled="!canRemoveContentLevel"
               @click="removeContentLevel(levelIndex)"
             >
-              删除
+              {{ t('settings.delete') }}
             </button>
           </div>
 
           <div class="settings-grid">
-            <label class="settings-field"><span>Latin 字体</span><input
+            <label class="settings-field"><span>{{ t('settings.latinFont') }}</span><input
               v-model="level.item.fonts.latinFamily"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>CJK 字体</span><input
+            <label class="settings-field"><span>{{ t('settings.cjkFont') }}</span><input
               v-model="level.item.fonts.cjkFamily"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>引号字体</span><input
+            <label class="settings-field"><span>{{ t('settings.quoteFont') }}</span><input
               v-model="level.item.fonts.cnQuoteFamily"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>书名号字体</span><input
+            <label class="settings-field"><span>{{ t('settings.bookTitleFont') }}</span><input
               v-model="level.item.fonts.cnBookTitleFamily"
               class="settings-input"
               type="text"
@@ -339,12 +341,12 @@ const saveSettings = async (): Promise<void> => {
           </div>
 
           <div class="settings-grid">
-            <label class="settings-field"><span>字号</span><input
+            <label class="settings-field"><span>{{ t('settings.fontSize') }}</span><input
               v-model="level.item.style.size"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>字重</span><input
+            <label class="settings-field"><span>{{ t('settings.fontWeight') }}</span><input
               v-model.number="level.item.style.weight"
               class="settings-input"
               type="number"
@@ -352,17 +354,17 @@ const saveSettings = async (): Promise<void> => {
               max="900"
               step="100"
             ></label>
-            <label class="settings-field"><span>文字颜色</span><input
+            <label class="settings-field"><span>{{ t('settings.textColor') }}</span><input
               v-model="level.item.style.colors.text"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>背景颜色</span><input
+            <label class="settings-field"><span>{{ t('settings.backgroundColor') }}</span><input
               v-model="level.item.style.colors.background"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>标题编号模板</span><input
+            <label class="settings-field"><span>{{ t('settings.headingIndexTemplate') }}</span><input
               v-model="level.item.style.index"
               class="settings-input"
               type="text"
@@ -370,7 +372,7 @@ const saveSettings = async (): Promise<void> => {
             <label
               v-if="level.key === 'h1'"
               class="settings-field"
-            ><span>sectionStyle</span><input
+            ><span>{{ t('settings.sectionStyle') }}</span><input
               v-model="level.sectionStyle"
               class="settings-input"
               type="text"
@@ -379,7 +381,7 @@ const saveSettings = async (): Promise<void> => {
 
           <div class="settings-grid">
             <label class="settings-field">
-              <span>对齐</span>
+              <span>{{ t('settings.align') }}</span>
               <select
                 v-model="level.item.paragraph.align"
                 class="settings-input"
@@ -398,22 +400,22 @@ const saveSettings = async (): Promise<void> => {
                 </option>
               </select>
             </label>
-            <label class="settings-field"><span>缩进</span><input
+            <label class="settings-field"><span>{{ t('settings.indent') }}</span><input
               v-model="level.item.paragraph.indent"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>行高</span><input
+            <label class="settings-field"><span>{{ t('settings.lineHeight') }}</span><input
               v-model="level.item.paragraph.spacing.lineHeight"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>段前</span><input
+            <label class="settings-field"><span>{{ t('settings.spacingBefore') }}</span><input
               v-model="level.item.paragraph.spacing.before"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>段后</span><input
+            <label class="settings-field"><span>{{ t('settings.spacingAfter') }}</span><input
               v-model="level.item.paragraph.spacing.after"
               class="settings-input"
               type="text"
@@ -425,14 +427,14 @@ const saveSettings = async (): Promise<void> => {
       <section class="settings-block">
         <div class="settings-block__title-row">
           <h3 class="settings-block__title">
-            Pagination Sections
+            {{ t('settings.paginationSections') }}
           </h3>
           <button
             class="btn btn--secondary"
             type="button"
             @click="addPaginationSection"
           >
-            新增 Section
+            {{ t('settings.addSection') }}
           </button>
         </div>
 
@@ -443,7 +445,7 @@ const saveSettings = async (): Promise<void> => {
         >
           <div class="settings-subblock__header">
             <label class="settings-field">
-              <span>Section Key</span>
+              <span>{{ t('settings.sectionKey') }}</span>
               <input
                 v-model="section.key"
                 class="settings-input"
@@ -455,7 +457,7 @@ const saveSettings = async (): Promise<void> => {
               type="button"
               @click="removePaginationSection(sectionIndex)"
             >
-              删除
+              {{ t('settings.delete') }}
             </button>
           </div>
 
@@ -463,14 +465,14 @@ const saveSettings = async (): Promise<void> => {
             <label class="settings-field settings-field--inline"><input
               v-model="section.pagination.enabled"
               type="checkbox"
-            ><span>启用该 section 页码</span></label>
-            <label class="settings-field"><span>格式</span><input
+            ><span>{{ t('settings.enableSectionPagination') }}</span></label>
+            <label class="settings-field"><span>{{ t('settings.format') }}</span><input
               v-model="section.pagination.format"
               class="settings-input"
               type="text"
             ></label>
             <label class="settings-field">
-              <span>数字样式</span>
+              <span>{{ t('settings.numberStyle') }}</span>
               <select
                 v-model="section.pagination.numberStyle"
                 class="settings-input"
@@ -489,12 +491,12 @@ const saveSettings = async (): Promise<void> => {
                 </option>
               </select>
             </label>
-            <label class="settings-field"><span>页码字号</span><input
+            <label class="settings-field"><span>{{ t('settings.paginationFontSize') }}</span><input
               v-model="section.pagination.style.size"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>页码字重</span><input
+            <label class="settings-field"><span>{{ t('settings.paginationFontWeight') }}</span><input
               v-model.number="section.pagination.style.weight"
               class="settings-input"
               type="number"
@@ -502,17 +504,17 @@ const saveSettings = async (): Promise<void> => {
               max="900"
               step="100"
             ></label>
-            <label class="settings-field"><span>页码文字颜色</span><input
+            <label class="settings-field"><span>{{ t('settings.paginationTextColor') }}</span><input
               v-model="section.pagination.style.colors.text"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>页码 Latin 字体</span><input
+            <label class="settings-field"><span>{{ t('settings.paginationLatinFont') }}</span><input
               v-model="section.pagination.style.fonts.latinFamily"
               class="settings-input"
               type="text"
             ></label>
-            <label class="settings-field"><span>页码 CJK 字体</span><input
+            <label class="settings-field"><span>{{ t('settings.paginationCjkFont') }}</span><input
               v-model="section.pagination.style.fonts.cjkFamily"
               class="settings-input"
               type="text"
@@ -521,7 +523,7 @@ const saveSettings = async (): Promise<void> => {
 
           <div class="settings-grid">
             <label class="settings-field">
-              <span>垂直锚点</span>
+              <span>{{ t('settings.verticalAnchor') }}</span>
               <select
                 v-model="section.pagination.position.vertical.anchor"
                 class="settings-input"
@@ -534,13 +536,13 @@ const saveSettings = async (): Promise<void> => {
                 </option>
               </select>
             </label>
-            <label class="settings-field"><span>垂直偏移</span><input
+            <label class="settings-field"><span>{{ t('settings.verticalOffset') }}</span><input
               v-model="section.pagination.position.vertical.offset"
               class="settings-input"
               type="text"
             ></label>
             <label class="settings-field">
-              <span>水平锚点</span>
+              <span>{{ t('settings.horizontalAnchor') }}</span>
               <select
                 v-model="section.pagination.position.horizontal.anchor"
                 class="settings-input"
@@ -562,7 +564,7 @@ const saveSettings = async (): Promise<void> => {
                 </option>
               </select>
             </label>
-            <label class="settings-field"><span>水平偏移</span><input
+            <label class="settings-field"><span>{{ t('settings.horizontalOffset') }}</span><input
               v-model="section.pagination.position.horizontal.offset"
               class="settings-input"
               type="text"
@@ -573,15 +575,15 @@ const saveSettings = async (): Promise<void> => {
             <label class="settings-field settings-field--inline"><input
               v-model="section.page.enabled"
               type="checkbox"
-            ><span>覆盖 Page 配置</span></label>
-            <label class="settings-field"><span>覆盖 size</span><input
+            ><span>{{ t('settings.overridePage') }}</span></label>
+            <label class="settings-field"><span>{{ t('settings.overrideSize') }}</span><input
               v-model="section.page.size"
               class="settings-input"
               type="text"
               :disabled="!section.page.enabled"
             ></label>
             <label class="settings-field">
-              <span>覆盖 orientation</span>
+              <span>{{ t('settings.overrideOrientation') }}</span>
               <select
                 v-model="section.page.orientation"
                 class="settings-input"
@@ -595,25 +597,25 @@ const saveSettings = async (): Promise<void> => {
                 </option>
               </select>
             </label>
-            <label class="settings-field"><span>覆盖上边距</span><input
+            <label class="settings-field"><span>{{ t('settings.overrideTopMargin') }}</span><input
               v-model="section.page.margins.top"
               class="settings-input"
               type="text"
               :disabled="!section.page.enabled"
             ></label>
-            <label class="settings-field"><span>覆盖右边距</span><input
+            <label class="settings-field"><span>{{ t('settings.overrideRightMargin') }}</span><input
               v-model="section.page.margins.right"
               class="settings-input"
               type="text"
               :disabled="!section.page.enabled"
             ></label>
-            <label class="settings-field"><span>覆盖下边距</span><input
+            <label class="settings-field"><span>{{ t('settings.overrideBottomMargin') }}</span><input
               v-model="section.page.margins.bottom"
               class="settings-input"
               type="text"
               :disabled="!section.page.enabled"
             ></label>
-            <label class="settings-field"><span>覆盖左边距</span><input
+            <label class="settings-field"><span>{{ t('settings.overrideLeftMargin') }}</span><input
               v-model="section.page.margins.left"
               class="settings-input"
               type="text"
@@ -625,14 +627,14 @@ const saveSettings = async (): Promise<void> => {
             <label class="settings-field settings-field--inline"><input
               v-model="section.parser.enabled"
               type="checkbox"
-            ><span>覆盖 Parser 配置</span></label>
+            ><span>{{ t('settings.overrideParser') }}</span></label>
             <label class="settings-field settings-field--inline"><input
               v-model="section.parser.headingNumbering"
               type="checkbox"
               :disabled="!section.parser.enabled"
-            ><span>标题编号</span></label>
+            ><span>{{ t('settings.headingNumbering') }}</span></label>
             <label class="settings-field">
-              <span>覆盖 enterStyle</span>
+              <span>{{ t('settings.overrideEnterStyle') }}</span>
               <select
                 v-model="section.parser.enterStyle"
                 class="settings-input"
@@ -650,13 +652,13 @@ const saveSettings = async (): Promise<void> => {
               v-model="section.parser.linkify"
               type="checkbox"
               :disabled="!section.parser.enabled"
-            ><span>自动链接</span></label>
+            ><span>{{ t('settings.linkify') }}</span></label>
             <label class="settings-field settings-field--inline"><input
               v-model="section.parser.typographer"
               type="checkbox"
               :disabled="!section.parser.enabled"
-            ><span>排版增强</span></label>
-            <label class="settings-field"><span>覆盖 disabledSyntax</span><input
+            ><span>{{ t('settings.typographer') }}</span></label>
+            <label class="settings-field"><span>{{ t('settings.overrideDisabledSyntax') }}</span><input
               v-model="section.parser.disabledSyntax"
               class="settings-input"
               type="text"
@@ -680,7 +682,7 @@ const saveSettings = async (): Promise<void> => {
           :disabled="saving"
           @click="closePanel"
         >
-          取消
+          {{ t('settings.cancel') }}
         </button>
         <button
           class="btn btn--primary"
@@ -688,7 +690,7 @@ const saveSettings = async (): Promise<void> => {
           :disabled="saving"
           @click="saveSettings"
         >
-          {{ saving ? '保存中...' : '保存并应用' }}
+          {{ saving ? t('settings.saving') : t('settings.saveAndApply') }}
         </button>
       </div>
     </div>

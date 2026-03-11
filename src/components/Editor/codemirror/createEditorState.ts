@@ -7,6 +7,7 @@ import { createSugarFoldExtension } from './extensions/sugarFoldExtension';
 import { createHeadingRainbowFoldExtension } from './extensions/headingRainbowFoldExtension';
 import { createColorPreviewExtension } from './extensions/colorPreviewExtension';
 import { editorTheme } from './theme';
+import { i18n } from '../../../locales';
 
 interface CreateEditorStateOptions {
   content: string;
@@ -14,6 +15,7 @@ interface CreateEditorStateOptions {
 }
 
 export function createEditorState(options: CreateEditorStateOptions): EditorState {
+  const t = i18n.global.t;
   const extensions: Extension[] = [
     history(),
     keymap.of([indentWithTab, ...historyKeymap, ...defaultKeymap]),
@@ -32,7 +34,7 @@ export function createEditorState(options: CreateEditorStateOptions): EditorStat
     }),
     EditorState.tabSize.of(4),
     EditorView.contentAttributes.of({
-      'aria-label': '公文 Markdown 编辑器'
+      'aria-label': t('codemirror.editorAria')
     })
   ];
 

@@ -6,12 +6,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { EditorSettings, PreviewSettings } from '../types/settings'
+import { i18n } from '../locales'
 
 /**
  * 设置 Store
  * 管理编辑器设置、预览设置、自动保存配置
  */
 export const useSettingsStore = defineStore('settings', () => {
+  const t = i18n.global.t
   // State
   /** 编辑器设置 */
   const editorSettings = ref<EditorSettings>({
@@ -127,7 +129,7 @@ export const useSettingsStore = defineStore('settings', () => {
         }
       }
     } catch (error) {
-      console.error('Failed to load settings:', error)
+      console.error(t('logs.settings.loadFailed'), error)
     }
   }
 
@@ -146,7 +148,7 @@ export const useSettingsStore = defineStore('settings', () => {
       
       localStorage.setItem('gov-draft-settings', JSON.stringify(settingsData))
     } catch (error) {
-      console.error('Failed to save settings:', error)
+      console.error(t('logs.settings.saveFailed'), error)
       throw error
     }
   }
