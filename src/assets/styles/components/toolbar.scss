@@ -1,0 +1,138 @@
+@use '../utilities/breakpoints' as bp;
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.toolbar__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.toolbar__divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border-color);
+  margin: 0 2px;
+}
+
+.toolbar input[type='file'] {
+  display: none;
+}
+
+.toolbar__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--status-bg);
+  color: var(--status-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.toolbar :deep(.btn) {
+  min-height: 28px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.toolbar :deep(.btn--icon) {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+}
+
+.toolbar :deep(.icon) {
+  width: 14px;
+  height: 14px;
+}
+
+.export-menu {
+  position: relative;
+}
+
+.export-menu__content {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--glass-overlay-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px var(--menu-shadow-color), 0 10px 30px var(--menu-shadow-strong-color);
+  display: grid;
+  gap: 4px;
+}
+
+.export-menu-transition-enter-active,
+.export-menu-transition-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.export-menu-transition-enter-from,
+.export-menu-transition-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
+.export-menu-transition-enter-to,
+.export-menu-transition-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.export-menu__item {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+}
+
+.export-menu__item:hover {
+  background: var(--hover-bg);
+  color: var(--brand-secondary);
+}
+
+@include bp.down(sm) {
+  .toolbar {
+    padding: 6px;
+  }
+
+  .toolbar__actions {
+    width: 100%;
+  }
+
+  .toolbar__meta {
+    width: 100%;
+  }
+
+  .toolbar__divider {
+    display: none;
+  }
+}

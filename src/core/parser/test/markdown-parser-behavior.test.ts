@@ -265,4 +265,51 @@ describe('MarkdownParser behavior', () => {
     expect(matches).toHaveLength(1)
     expect(html).toContain('--content-body-paragraph-indent: 0em;')
     expect(html).not.toContain('--content-body-paragraph-indent: 2em;')
-  })})
+  })
+
+  it('treats single Enter as new paragraph when enterStyle is paragraph', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [], enterStyle: 'paragraph' })
+
+    const html = parser.parse(['第一行', '第二行'].join('\n'))
+
+    expect(html).toContain('<p>第一行</p>')
+    expect(html).toContain('<p>第二行</p>')
+  })
+
+  it('treats line-end // plus Enter as manual line break when enterStyle is paragraph', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [], enterStyle: 'paragraph' })
+
+    const html = parser.parse(['第一行//', '第二行'].join('\n'))
+
+    expect(html).toMatch(/<p>第一行<br>\s*第二行<\/p>/)
+  })
+
+  it('keeps heading structure when single Enter follows heading under enterStyle paragraph', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [], enterStyle: 'paragraph' })
+
+    const html = parser.parse(['## 标题', '正文'].join('\n'))
+
+    expect(html).toContain('<h2>标题</h2>')
+    expect(html).toContain('<p>正文</p>')
+  })
+
+  it('supports manual // line break inside local style container under enterStyle paragraph', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [], enterStyle: 'paragraph' })
+
+    const markdown = ['::: body.paragraph.indent:0em', '容器第一行//', '容器第二行', ':::'].join('\n')
+    const html = parser.parse(markdown)
+
+    expect(html).toContain('class="local-style-container"')
+    expect(html).toMatch(/<p>容器第一行<br>\s*容器第二行<\/p>/)
+  })
+
+  it('keeps explicit empty lines as visible blank paragraphs under enterStyle paragraph', () => {
+    const parser = new MarkdownParser({ headingNumbering: false, disabledSyntax: [], enterStyle: 'paragraph' })
+
+    const html = parser.parse(['第一段', '', '第二段'].join('\n'))
+
+    expect(html).toContain('<p>第一段</p>')
+    expect(html).toContain('<p>\u00A0</p>')
+    expect(html).toContain('<p>第二段</p>')
+  })
+})

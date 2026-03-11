@@ -1,0 +1,109 @@
+@use '../utilities/breakpoints' as bp;
+
+.paper-stage {
+	flex: 1;
+	min-height: 0;
+	padding: 16px;
+	overflow-x: auto;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-x pan-y;
+	cursor: grab;
+	background: #edf1f7;
+}
+
+.paper-stage.is-dragging {
+	cursor: grabbing;
+	user-select: none;
+}
+
+.paper-stage::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+.paper-stage::-webkit-scrollbar-track {
+	background: #dbe3ef;
+	border-radius: 999px;
+}
+
+.paper-stage::-webkit-scrollbar-thumb {
+	background: #9fb2cc;
+	border-radius: 999px;
+}
+
+.paper-sheet {
+	width: var(--page-dimension-width, 210mm);
+	height: var(--page-dimension-height, 297mm);
+	min-height: var(--page-dimension-height, 297mm);
+	margin: 0 auto;
+	padding: var(--page-margin-top, 37mm) var(--page-margin-right, 26mm)
+		var(--page-margin-bottom, 35mm) var(--page-margin-left, 28mm);
+	background: #fff;
+	color: #111827;
+	overflow: hidden;
+	box-shadow:
+		0 16px 40px rgba(15, 23, 42, 0.12),
+		0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.paper-stack {
+	display: grid;
+	gap: 16px;
+	align-content: start;
+	width: max-content;
+	min-width: 100%;
+	justify-items: center;
+	zoom: var(--preview-scale, 1);
+}
+
+@supports not (zoom: 1) {
+	.paper-stack {
+		transform: scale(var(--preview-scale, 1));
+		transform-origin: top center;
+	}
+}
+
+.paper-measure {
+	position: fixed;
+	top: -99999px;
+	left: -99999px;
+	visibility: hidden;
+	pointer-events: none;
+	z-index: -1;
+}
+
+.paper-measure__sheet {
+	box-shadow: none;
+}
+
+.paper-measure__content {
+	height: 100%;
+}
+
+.paper-sheet.preview-content {
+	font-family: var(--content-body-fonts-cjk-family, '仿宋_GB2312', serif);
+	font-size: var(--content-body-style-size, 16pt);
+	line-height: var(--content-body-paragraph-spacing-line-height, 1.8);
+	cursor: grab;
+}
+
+.paper-sheet.preview-content > *:first-child {
+	margin-top: 0;
+}
+
+.paper-sheet.preview-content * {
+	cursor: text;
+}
+
+.paper-stage.is-dragging .paper-sheet.preview-content,
+.paper-stage.is-dragging .paper-sheet.preview-content * {
+	cursor: grabbing;
+}
+
+@include bp.down(lg) {
+	.paper-stage {
+		min-height: 62vh;
+	}
+}

@@ -13,10 +13,12 @@ const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor'
 const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
 const HEADING_INDEX_DISABLED_VALUE = '0lines';
+const MANUAL_BREAK_SUFFIX_PATTERN = /\s*\/\/\s*$/;
+const EMPTY_PARAGRAPH_PLACEHOLDER = '&nbsp;';
 
 const defaultOptions: MarkdownOptions = {
   html: false,
-  breaks: true,
+  enterStyle: 'paragraph',
   linkify: true,
   typographer: true,
   headingNumbering: true,
@@ -71,7 +73,7 @@ export class MarkdownParser {
   private createMarkdownIt(options: MarkdownOptions): MarkdownIt {
     const parser = new MarkdownIt({
       html: options.html,
-      breaks: options.breaks,
+      breaks: options.enterStyle === 'lineBreak',
       linkify: options.linkify,
       typographer: options.typographer
     });
@@ -333,7 +335,49 @@ export class MarkdownParser {
       outputLines.push(currentLine);
     }
 
+    if (this.options.enterStyle === 'paragraph') {
+      return this.normalizeSingleLineBreaks(outputLines);
+    }
+
     return outputLines.join('\n');
+  }
+
+  private normalizeSingleLineBreaks(lines: string[]): string {
+    const paragraphs: string[] = [];
+    let paragraphLines: string[] = [];
+
+    const flushParagraph = (): void => {
+      if (paragraphLines.length === 0) {
+        return;
+      }
+
+      const hasContent = paragraphLines.some((line) => line.trim().length > 0);
+      if (hasContent) {
+        paragraphs.push(paragraphLines.join('\n'));
+      }
+
+      paragraphLines = [];
+    };
+
+    for (const line of lines) {
+      if (line.trim().length === 0) {
+        flushParagraph();
+        paragraphs.push(EMPTY_PARAGRAPH_PLACEHOLDER);
+        continue;
+      }
+
+      if (MANUAL_BREAK_SUFFIX_PATTERN.test(line)) {
+        paragraphLines.push(line.replace(MANUAL_BREAK_SUFFIX_PATTERN, '  '));
+        continue;
+      }
+
+      paragraphLines.push(line);
+      flushParagraph();
+    }
+
+    flushParagraph();
+
+    return paragraphs.join('\n\n');
   }
 
   private applyHeadingNumbering(tokens: Token[], headingStyles?: Partial<Record<HeadingLevel, string | undefined>>): Token[] {

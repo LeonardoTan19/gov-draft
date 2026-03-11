@@ -12,6 +12,7 @@ export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
 export type LocalStyleTargetPath = string;
+export type EnterStyle = 'paragraph' | 'lineBreak';
 
 export interface TextFontConfig {
   latinFamily: string;
@@ -69,7 +70,7 @@ export interface PageConfig {
 
 export interface ParserConfig {
   html?: boolean;
-  breaks?: boolean;
+  enterStyle?: EnterStyle;
   linkify?: boolean;
   typographer?: boolean;
   headingNumbering: boolean;
