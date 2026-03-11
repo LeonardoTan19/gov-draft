@@ -1,35 +1,18 @@
 import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
-import type { HeadingLevel, LocalStyleTargetPath, ParserConfig } from '../../types/rule';
+import type { HeadingLevel, ParserConfig } from '../../types/rule';
+import { toCssCustomProperty } from '../rule-engine/css-variable';
 
 export type MarkdownOptions = ParserConfig;
 
 type NumberingPlaceholder = '{number}' | '{zhHansIndex}' | '{zhHantIndex}' | '{romanIndex}';
 
-type LocalStyleAliasMap = Record<string, LocalStyleTargetPath>;
-
-const CSS_LENGTH_PATTERN = /^0$|^-?\d+(\.\d+)?(mm|cm|in|pt|px|em|rem|%)$/;
 const CSS_VALUE_UNSAFE_CHARS = /[{};\n\r]/g;
-const LOCAL_STYLE_TARGET_TO_VARIABLES: Record<LocalStyleTargetPath, string[]> = {
-  'content.body.paragraph.indent': ['--font-body-indent'],
-  'content.h1.paragraph.indent': ['--font-heading-h1-indent'],
-  'content.h2.paragraph.indent': ['--font-heading-h2-indent'],
-  'content.h3.paragraph.indent': ['--font-heading-h3-indent'],
-  'content.h4.paragraph.indent': ['--font-heading-h4-indent']
-};
-const DEFAULT_LOCAL_STYLE_ALIASES: LocalStyleAliasMap = {
-  indent: 'content.body.paragraph.indent',
-  bodyIndent: 'content.body.paragraph.indent',
-  h1Indent: 'content.h1.paragraph.indent',
-  h2Indent: 'content.h2.paragraph.indent',
-  h3Indent: 'content.h3.paragraph.indent',
-  h4Indent: 'content.h4.paragraph.indent',
-  'content.body.paragraph.indent': 'content.body.paragraph.indent',
-  'content.h1.paragraph.indent': 'content.h1.paragraph.indent',
-  'content.h2.paragraph.indent': 'content.h2.paragraph.indent',
-  'content.h3.paragraph.indent': 'content.h3.paragraph.indent',
-  'content.h4.paragraph.indent': 'content.h4.paragraph.indent'
-};
+const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
+const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
+const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
+const TEXT_TOKEN_PATTERN = /[A-Za-z0-9]+|[“”‘’]|[《》〈〉]/g;
+const HEADING_INDEX_DISABLED_VALUE = '0lines';
 
 const defaultOptions: MarkdownOptions = {
   html: false,
@@ -38,7 +21,7 @@ const defaultOptions: MarkdownOptions = {
   typographer: true,
   headingNumbering: true,
   disabledSyntax: ['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule'],
-  localStyleAliases: DEFAULT_LOCAL_STYLE_ALIASES
+  localStyleAliases: {}
 };
 
 export class MarkdownParser {
@@ -93,7 +76,8 @@ export class MarkdownParser {
       typographer: options.typographer
     });
 
-    this.registerLocalStyleContainer(parser, options.localStyleAliases ?? {});
+    this.registerLocalStyleContainer(parser);
+    this.registerTextFontScopes(parser);
 
     if (options.disabledSyntax.includes('codeBlock')) {
       parser.disable(['fence', 'code']);
@@ -108,8 +92,8 @@ export class MarkdownParser {
     return parser;
   }
 
-  private registerLocalStyleContainer(parser: MarkdownIt, aliasMap: LocalStyleAliasMap): void {
-    parser.block.ruler.before('fence', 'local_style_container', (state, startLine, endLine, silent) => {
+  private registerLocalStyleContainer(parser: MarkdownIt): void {
+    const ruleHandler = (state: Parameters<Parameters<MarkdownIt['block']['ruler']['before']>[2]>[0], startLine: number, endLine: number, silent: boolean): boolean => {
       const startPos = (state.bMarks[startLine] ?? 0) + (state.tShift[startLine] ?? 0);
       const maxPos = state.eMarks[startLine] ?? startPos;
       const firstLine = state.src.slice(startPos, maxPos).trim();
@@ -119,18 +103,27 @@ export class MarkdownParser {
       }
 
       const descriptor = firstLine.slice(3).trim();
-      const styleText = this.parseLocalStyleDescriptor(descriptor, aliasMap);
+      const styleText = this.parseMultiLocalStyleDescriptors(descriptor);
       if (!styleText) {
         return false;
       }
 
+      let nesting = 1;
       let nextLine = startLine + 1;
       while (nextLine < endLine) {
         const lineStart = (state.bMarks[nextLine] ?? 0) + (state.tShift[nextLine] ?? 0);
         const lineEnd = state.eMarks[nextLine] ?? lineStart;
         const lineText = state.src.slice(lineStart, lineEnd).trim();
-        if (lineText === ':::') {
-          break;
+        if (lineText.startsWith(':::')) {
+          const innerDescriptor = lineText.slice(3).trim();
+          if (innerDescriptor) {
+            nesting += 1;
+          } else {
+            nesting -= 1;
+            if (nesting === 0) {
+              break;
+            }
+          }
         }
         nextLine += 1;
       }
@@ -156,10 +149,29 @@ export class MarkdownParser {
 
       state.line = nextLine + 1;
       return true;
-    });
+    };
+
+    parser.block.ruler.before('fence', 'local_style_container', ruleHandler, { alt: ['paragraph', 'reference', 'blockquote'] });
   }
 
-  private parseLocalStyleDescriptor(descriptor: string, aliasMap: LocalStyleAliasMap): string {
+  private parseMultiLocalStyleDescriptors(descriptor: string): string {
+    const segments = descriptor.split(/[;；]/).map((segment) => segment.trim()).filter(Boolean);
+    if (segments.length === 0) {
+      return '';
+    }
+
+    const declarations: string[] = [];
+    for (const segment of segments) {
+      const result = this.parseLocalStyleDescriptor(segment);
+      if (result) {
+        declarations.push(result);
+      }
+    }
+
+    return declarations.length > 0 ? declarations.join(' ') : '';
+  }
+
+  private parseLocalStyleDescriptor(descriptor: string): string {
     const separatorIndex = this.findDescriptorSeparatorIndex(descriptor);
     if (separatorIndex <= 0) {
       return '';
@@ -171,22 +183,18 @@ export class MarkdownParser {
       return '';
     }
 
-    const normalizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
-    if (!CSS_LENGTH_PATTERN.test(normalizedValue)) {
+    const normalizedValue = this.normalizeLocalStyleValue(rawValue);
+    if (!normalizedValue) {
       return '';
     }
 
-    const targetPath = this.resolveLocalStyleTargetPath(key, aliasMap);
+    const targetPath = this.resolveLocalStyleTargetPath(key);
     if (!targetPath) {
       return '';
     }
 
-    const cssVariables = LOCAL_STYLE_TARGET_TO_VARIABLES[targetPath];
-    if (!cssVariables || cssVariables.length === 0) {
-      return '';
-    }
-
-    return cssVariables.map((cssVariable) => `${cssVariable}: ${normalizedValue};`).join(' ');
+    const cssVariable = toCssCustomProperty(targetPath);
+    return `${cssVariable}: ${normalizedValue};`;
   }
 
   private findDescriptorSeparatorIndex(descriptor: string): number {
@@ -203,21 +211,98 @@ export class MarkdownParser {
     return Math.min(colonIndex, fullWidthColonIndex);
   }
 
-  private resolveLocalStyleTargetPath(key: string, aliasMap: LocalStyleAliasMap): LocalStyleTargetPath | null {
-    if (key in LOCAL_STYLE_TARGET_TO_VARIABLES) {
-      return key as LocalStyleTargetPath;
+  private normalizeLocalStyleValue(rawValue: string): string {
+    const sanitizedValue = rawValue.replace(CSS_VALUE_UNSAFE_CHARS, ' ').trim();
+    if (!sanitizedValue) {
+      return '';
     }
 
-    const mergedAliasMap: LocalStyleAliasMap = {
-      ...DEFAULT_LOCAL_STYLE_ALIASES,
-      ...aliasMap
+    const firstChar = sanitizedValue[0];
+    const lastChar = sanitizedValue[sanitizedValue.length - 1];
+    const isQuoted = (firstChar === '\'' && lastChar === '\'') || (firstChar === '"' && lastChar === '"');
+    if (!isQuoted) {
+      return sanitizedValue;
+    }
+
+    return sanitizedValue.slice(1, -1).trim();
+  }
+
+  private resolveLocalStyleTargetPath(key: string): string | null {
+    const normalizedKey = key.trim();
+
+    if (this.isOverridablePath(normalizedKey)) {
+      return normalizedKey;
+    }
+
+    if (normalizedKey.includes('.')) {
+      const canonicalPath = `${LOCAL_STYLE_SCOPE_PREFIX}${normalizedKey}`;
+      if (this.isOverridablePath(canonicalPath)) {
+        return canonicalPath;
+      }
+    }
+
+    return null;
+  }
+
+  private isOverridablePath(path: string): boolean {
+    if (!path.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
+      return false;
+    }
+
+    if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(path)) {
+      return false;
+    }
+
+    return !path
+      .split('.')
+      .some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
+  }
+
+  private registerTextFontScopes(parser: MarkdownIt): void {
+    const fallbackTextRenderer = parser.renderer.rules.text;
+
+    parser.renderer.rules.text = (tokens, index, options, env, self) => {
+      const defaultRenderer = fallbackTextRenderer ?? ((rawTokens, tokenIndex) => self.renderToken(rawTokens, tokenIndex, options));
+      const token = tokens[index];
+      if (!token || token.type !== 'text') {
+        return defaultRenderer(tokens, index, options, env, self);
+      }
+
+      const content = token.content ?? '';
+      if (!content) {
+        return '';
+      }
+
+      return this.wrapTextScopes(content, parser.utils.escapeHtml);
     };
-    const aliasTarget = mergedAliasMap[key];
-    if (!aliasTarget) {
-      return null;
+  }
+
+  private wrapTextScopes(content: string, escapeHtml: (source: string) => string): string {
+    let cursor = 0;
+    let result = '';
+
+    content.replace(TEXT_TOKEN_PATTERN, (matched, offset) => {
+      if (offset > cursor) {
+        result += escapeHtml(content.slice(cursor, offset));
+      }
+
+      if (/^[A-Za-z0-9]+$/.test(matched)) {
+        result += `<span class="latin-text">${escapeHtml(matched)}</span>`;
+      } else if (/^[“”‘’]$/.test(matched)) {
+        result += `<span class="cn-quote">${escapeHtml(matched)}</span>`;
+      } else {
+        result += `<span class="cn-book-title">${escapeHtml(matched)}</span>`;
+      }
+
+      cursor = offset + matched.length;
+      return matched;
+    });
+
+    if (cursor < content.length) {
+      result += escapeHtml(content.slice(cursor));
     }
 
-    return aliasTarget;
+    return result;
   }
 
   private preprocessMarkdown(markdown: string): string {
@@ -309,7 +394,7 @@ export class MarkdownParser {
 
   private formatHeadingPrefix(currentIndex: number, style: string | undefined): string {
     const template = String(style ?? '').trim();
-    if (!template) {
+    if (!template || template === HEADING_INDEX_DISABLED_VALUE) {
       return '';
     }
 

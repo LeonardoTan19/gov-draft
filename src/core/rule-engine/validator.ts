@@ -7,13 +7,9 @@ const CSS_COLOR_PATTERN = /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb
 const FONT_WEIGHT_SET = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
 const ALIGN_SET = new Set(['left', 'center', 'right', 'justify']);
 const DISABLED_SYNTAX_SET = new Set(['codeBlock', 'blockquote', 'unorderedList', 'horizontalRule']);
-const LOCAL_STYLE_TARGET_SET = new Set([
-  'content.body.paragraph.indent',
-  'content.h1.paragraph.indent',
-  'content.h2.paragraph.indent',
-  'content.h3.paragraph.indent',
-  'content.h4.paragraph.indent'
-]);
+const LOCAL_STYLE_TARGET_PATH_PATTERN = /^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)+$/;
+const UNSAFE_PATH_SEGMENT_SET = new Set(['__proto__', 'prototype', 'constructor']);
+const LOCAL_STYLE_SCOPE_PREFIX = 'content.';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -36,7 +32,6 @@ export function validateRule(ruleConfig: unknown): ValidationResult {
   validateString(rule.version, 'version', issues);
 
   validateContent(rule.content, issues);
-  validateColors(rule.colors, issues);
   validatePage(rule.page, issues);
   validateParser(rule.parser, issues);
 
@@ -74,6 +69,10 @@ function validateString(value: unknown, path: string, issues: ValidationIssue[])
 }
 
 function validateCssLength(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (typeof value === 'number' && value === 0) {
+    return;
+  }
+
   if (typeof value !== 'string' || !CSS_LENGTH_PATTERN.test(value.trim())) {
     pushError(issues, path, '必须是合法长度值（例如 16pt、37mm、2em、0）');
   }
@@ -86,6 +85,14 @@ function validateCssLineHeight(value: unknown, path: string, issues: ValidationI
 }
 
 function validateCssParagraphSpacing(value: unknown, path: string, issues: ValidationIssue[]): void {
+  if (value === '') {
+    return;
+  }
+
+  if (typeof value === 'number' && value === 0) {
+    return;
+  }
+
   if (typeof value !== 'string' || !CSS_PARAGRAPH_SPACING_PATTERN.test(value.trim())) {
     pushError(issues, path, '必须是合法段间距（支持长度值、0、或 Nlines）');
   }
@@ -124,7 +131,14 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
   if (!isObject(contentItem.fonts)) {
     pushError(issues, `${path}.fonts`, '字段缺失或类型错误');
   } else {
-    validateString(contentItem.fonts.family, `${path}.fonts.family`, issues);
+    validateString(contentItem.fonts.latinFamily, `${path}.fonts.latinFamily`, issues);
+    validateString(contentItem.fonts.cjkFamily, `${path}.fonts.cjkFamily`, issues);
+    if (contentItem.fonts.cnQuoteFamily !== undefined) {
+      validateString(contentItem.fonts.cnQuoteFamily, `${path}.fonts.cnQuoteFamily`, issues);
+    }
+    if (contentItem.fonts.cnBookTitleFamily !== undefined) {
+      validateString(contentItem.fonts.cnBookTitleFamily, `${path}.fonts.cnBookTitleFamily`, issues);
+    }
   }
 
   if (!isObject(contentItem.style)) {
@@ -132,7 +146,16 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
   } else {
     validateCssLength(contentItem.style.size, `${path}.style.size`, issues);
     validateFontWeight(contentItem.style.weight, `${path}.style.weight`, issues);
-    validateCssColor(contentItem.style.color, `${path}.style.color`, issues);
+    if (!isObject(contentItem.style.colors)) {
+      pushError(issues, `${path}.style.colors`, '字段缺失或类型错误');
+    } else {
+      validateCssColor(contentItem.style.colors.text, `${path}.style.colors.text`, issues);
+      validateCssColor(contentItem.style.colors.background, `${path}.style.colors.background`, issues);
+    }
+
+    if (contentItem.style.index !== undefined && contentItem.style.index !== null && typeof contentItem.style.index !== 'string') {
+      pushError(issues, `${path}.style.index`, '必须是字符串');
+    }
   }
 
   if (!isObject(contentItem.paragraph)) {
@@ -150,9 +173,6 @@ function validateContentItem(contentItem: unknown, path: string, issues: Validat
     }
   }
 
-  if (contentItem.numberingStyle !== undefined && typeof contentItem.numberingStyle !== 'string') {
-    pushError(issues, `${path}.numberingStyle`, '必须是字符串');
-  }
 }
 
 function validateContent(content: unknown, issues: ValidationIssue[]): void {
@@ -166,17 +186,6 @@ function validateContent(content: unknown, issues: ValidationIssue[]): void {
   validateContentItem(content.h2, 'content.h2', issues);
   validateContentItem(content.h3, 'content.h3', issues);
   validateContentItem(content.h4, 'content.h4', issues);
-}
-
-function validateColors(colors: unknown, issues: ValidationIssue[]): void {
-  if (!isObject(colors)) {
-    pushError(issues, 'colors', '字段缺失或类型错误');
-    return;
-  }
-
-  validateCssColor(colors.text, 'colors.text', issues);
-  validateCssColor(colors.background, 'colors.background', issues);
-  validateCssColor(colors.accent, 'colors.accent', issues);
 }
 
 function validatePage(page: unknown, issues: ValidationIssue[]): void {
@@ -247,8 +256,25 @@ function validateParser(parser: unknown, issues: ValidationIssue[]): void {
           return;
         }
 
-        if (typeof target !== 'string' || !LOCAL_STYLE_TARGET_SET.has(target)) {
-          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径非法');
+        if (typeof target !== 'string') {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径必须是字符串');
+          return;
+        }
+
+        const normalizedTarget = target.trim();
+        if (!LOCAL_STYLE_TARGET_PATH_PATTERN.test(normalizedTarget)) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径格式非法（需为点分层级路径）');
+          return;
+        }
+
+        if (!normalizedTarget.startsWith(LOCAL_STYLE_SCOPE_PREFIX)) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径必须在 content.* 范围内');
+          return;
+        }
+
+        const hasUnsafeSegment = normalizedTarget.split('.').some((segment) => UNSAFE_PATH_SEGMENT_SET.has(segment));
+        if (hasUnsafeSegment) {
+          pushError(issues, `parser.localStyleAliases.${alias}`, '目标路径包含不安全字段');
         }
       });
     }

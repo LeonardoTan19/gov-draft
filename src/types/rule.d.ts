@@ -3,29 +3,31 @@
  */
 
 export type CssLengthUnit = 'mm' | 'cm' | 'in' | 'pt' | 'px' | 'em' | 'rem' | '%';
-export type CssLength = `${number}${CssLengthUnit}` | '0';
+export type CssLength = `${number}${CssLengthUnit}` | '0' | 0;
 export type CssColor = `#${string}` | `rgb(${string})` | `rgba(${string})` | `hsl(${string})` | `hsla(${string})`;
 export type CssLineHeight = `${number}` | CssLength;
-export type CssParagraphSpacing = CssLength | `${number}lines`;
+export type CssParagraphSpacing = CssLength | `${number}lines` | '';
 export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
 export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
-export type LocalStyleTargetPath =
-  | 'content.body.paragraph.indent'
-  | 'content.h1.paragraph.indent'
-  | 'content.h2.paragraph.indent'
-  | 'content.h3.paragraph.indent'
-  | 'content.h4.paragraph.indent';
+export type LocalStyleTargetPath = string;
 
 export interface TextFontConfig {
-  family: string;
+  latinFamily: string;
+  cjkFamily: string;
+  cnQuoteFamily?: string;
+  cnBookTitleFamily?: string;
 }
 
 export interface TextStyleConfig {
   size: CssLength;
   weight: FontWeightValue;
-  color: CssColor;
+  colors: {
+    text: CssColor;
+    background: CssColor;
+  };
+  index?: string | null;
 }
 
 export interface ParagraphSpacingConfig {
@@ -44,7 +46,6 @@ export interface ContentItemConfig {
   fonts: TextFontConfig;
   style: TextStyleConfig;
   paragraph: ParagraphConfig;
-  numberingStyle?: string;
 }
 
 export interface ContentConfig {
@@ -53,12 +54,6 @@ export interface ContentConfig {
   h2: ContentItemConfig;
   h3: ContentItemConfig;
   h4: ContentItemConfig;
-}
-
-export interface ColorConfig {
-  text: CssColor;
-  background: CssColor;
-  accent: CssColor;
 }
 
 export interface PageConfig {
@@ -108,7 +103,6 @@ export interface RuleConfig {
   version: string;
   description?: string;
   content: ContentConfig;
-  colors: ColorConfig;
   page: PageConfig;
   parser: ParserConfig;
 }
@@ -137,7 +131,6 @@ export interface Rule {
   version: string;
   description?: string;
   content: ContentConfig;
-  colors: ColorConfig;
   page: PageConfig;
   parser: ParserConfig;
 }
