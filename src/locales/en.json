@@ -1,0 +1,201 @@
+{
+	"app": {
+		"editorPanelAria": "Editor",
+		"previewPanelAria": "Preview",
+		"resizerAria": "Resize between editor and preview",
+		"defaultDocument": "# Official Document Notice\n\nDear all departments:\nThis is a sample document for gov-draft.\n\n## Schedule\n- Date: 2025-10-09 to 2025-10-11\n- Venue: Provincial Conference Center\n\n## Requirements\nPlease prepare a speech within 3 minutes.\n\n::: body.paragraph.align:right\nGeneral Office\n2025-09-26\n:::"
+	},
+	"topbar": {
+		"title": "gov-draft Official Document Typesetting System",
+		"ruleLabel": "Rule",
+		"languageSwitcherAria": "Language switcher",
+		"langEn": "EN",
+		"langZhCN": "中文",
+		"switchToEn": "Switch language to English",
+		"switchToZhCN": "Switch language to Simplified Chinese",
+		"unloaded": "Not loaded",
+		"parserUnloaded": "Parser strategy not loaded",
+		"none": "None",
+		"disabledSyntaxDelimiter": ", ",
+		"parserSummary": "Heading numbering: {headingNumbering} | Disabled syntax: {disabled}",
+		"enabled": "Enabled",
+		"disabled": "Disabled"
+	},
+	"toolbar": {
+		"aria": "Toolbar",
+		"actionsAria": "Editing and file tools",
+		"undoTitle": "Undo (Ctrl+Z)",
+		"redoTitle": "Redo (Ctrl+Y)",
+		"import": "Import",
+		"export": "Export",
+		"exportMarkdown": "Export Markdown",
+		"exportHtml": "Export HTML",
+		"exportPdf": "Export PDF",
+		"statsAria": "Document stats",
+		"wordCount": "Words {count}",
+		"charCount": "Characters {count}",
+		"importFailed": "Import failed"
+	},
+	"settings": {
+		"dialogAria": "Rule configuration",
+		"title": "Settings Center",
+		"close": "Close",
+		"basic": "Basic",
+		"ruleName": "Rule Name",
+		"version": "Version",
+		"parser": "Parser",
+		"headingNumbering": "Heading Numbering",
+		"enterStyle": "Enter Style",
+		"linkify": "Auto Linkify",
+		"typographer": "Typography Enhancements",
+		"disabledSyntax": "Disabled Syntax (comma separated)",
+		"page": "Page",
+		"enablePagination": "Enable Pagination",
+		"size": "Size (size)",
+		"orientation": "Orientation",
+		"marginTop": "Top Margin",
+		"marginRight": "Right Margin",
+		"marginBottom": "Bottom Margin",
+		"marginLeft": "Left Margin",
+		"contentLevels": "Content Levels",
+		"addLevel": "Add Level",
+		"levelKey": "Level Key",
+		"delete": "Delete",
+		"latinFont": "Latin Font",
+		"cjkFont": "CJK Font",
+		"quoteFont": "Quote Font",
+		"bookTitleFont": "Book Title Font",
+		"fontSize": "Font Size",
+		"fontWeight": "Font Weight",
+		"textColor": "Text Color",
+		"backgroundColor": "Background Color",
+		"headingIndexTemplate": "Heading Index Template",
+		"sectionStyle": "Section Style",
+		"align": "Align",
+		"indent": "Indent",
+		"lineHeight": "Line Height",
+		"spacingBefore": "Spacing Before",
+		"spacingAfter": "Spacing After",
+		"paginationSections": "Pagination Sections",
+		"addSection": "Add Section",
+		"sectionKey": "Section Key",
+		"enableSectionPagination": "Enable this section pagination",
+		"format": "Format",
+		"numberStyle": "Number Style",
+		"paginationFontSize": "Pagination Font Size",
+		"paginationFontWeight": "Pagination Font Weight",
+		"paginationTextColor": "Pagination Text Color",
+		"paginationLatinFont": "Pagination Latin Font",
+		"paginationCjkFont": "Pagination CJK Font",
+		"verticalAnchor": "Vertical Anchor",
+		"verticalOffset": "Vertical Offset",
+		"horizontalAnchor": "Horizontal Anchor",
+		"horizontalOffset": "Horizontal Offset",
+		"overridePage": "Override Page Config",
+		"overrideSize": "Override Size",
+		"overrideOrientation": "Override Orientation",
+		"overrideTopMargin": "Override Top Margin",
+		"overrideRightMargin": "Override Right Margin",
+		"overrideBottomMargin": "Override Bottom Margin",
+		"overrideLeftMargin": "Override Left Margin",
+		"overrideParser": "Override Parser Config",
+		"overrideEnterStyle": "Override Enter Style",
+		"overrideDisabledSyntax": "Override Disabled Syntax",
+		"cancel": "Cancel",
+		"saving": "Saving...",
+		"saveAndApply": "Save and Apply",
+		"saveFailed": "Save failed, please check your input format"
+	},
+	"codemirror": {
+		"editorAria": "Official document Markdown editor",
+		"expandHeading": "Expand heading content",
+		"collapseHeading": "Collapse heading content",
+		"openColorPicker": "Open color picker"
+	},
+	"fileSystem": {
+		"unsupportedFormat": "Unsupported file format: {filename}. Only Markdown (.md) files are supported.",
+		"importFailed": "File import failed: {message}",
+		"unknownError": "Unknown error",
+		"markdownExportFailed": "Markdown export failed: {message}",
+		"htmlExportFailed": "HTML export failed: {message}",
+		"pdfExportNoPages": "No paginated content found for export. Please make sure the preview area has been rendered.",
+		"pdfExportFailed": "PDF export failed: {message}",
+		"readResultNotString": "File read result is not a string",
+		"readFileFailed": "File reading failed"
+	},
+	"errors": {
+		"common": {
+			"unknownError": "Unknown error"
+		},
+		"rule": {
+			"invalidConfig": "Invalid rule config: {details}"
+		},
+		"parser": {
+			"markdownParseFailed": "Markdown parse failed: {details}"
+		},
+		"validator": {
+			"ruleConfigEmpty": "Rule config cannot be empty",
+			"ruleConfigObject": "Rule config must be an object",
+			"nonEmptyString": "Must be a non-empty string",
+			"string": "Must be a string",
+			"cssLength": "Must be a valid CSS length (e.g. 16pt, 37mm, 2em, 0)",
+			"cssLineHeight": "Must be a valid line-height (number or length)",
+			"cssParagraphSpacing": "Must be a valid paragraph spacing (length, 0, or Nlines)",
+			"cssColor": "Must be a valid color value (hex/rgb/rgba/hsl/hsla)",
+			"fontWeight": "Must be a 100-900 hundred-step number",
+			"textAlign": "Must be one of left/center/right/justify",
+			"boolean": "Must be a boolean",
+			"enterStyle": "Must be paragraph or lineBreak",
+			"missingOrInvalidField": "Missing field or invalid type",
+			"pageSizeOrDimensions": "Must provide size or dimensions(width/height)",
+			"pageOrientation": "Must be portrait or landscape",
+			"object": "Must be an object",
+			"paginationSectionsRequired": "paginationSections is required when pagination is enabled",
+			"atLeastOneSection": "At least one section config is required",
+			"sectionKeyEmpty": "Section key cannot be empty",
+			"atLeastOneSectionOption": "At least one of pagination/page/parser must be provided",
+			"paginationNumberStyle": "Must be one of arabic/roman/zhHans/zhHant",
+			"verticalAnchor": "Must be top or bottom",
+			"horizontalAnchor": "Must be one of left/center/right/outside/inside",
+			"invalidExpression": "Invalid expression: {expression}",
+			"convertibleCssLength": "Must be a CSS length convertible to px (mm/cm/in/pt/px/0)",
+			"array": "Must be an array",
+			"invalidSyntaxItem": "Contains invalid syntax item",
+			"aliasKeyEmpty": "Alias key cannot be empty",
+			"aliasTargetString": "Alias target path must be a string",
+			"aliasTargetFormat": "Alias target path format is invalid (dot-separated path required)",
+			"aliasTargetScope": "Alias target path must be within content.*",
+			"aliasTargetUnsafe": "Alias target path contains unsafe segments"
+		}
+	},
+	"logs": {
+		"rule": {
+			"loadFailed": "Failed to load rule:",
+			"saveFailed": "Failed to save rule:",
+			"initFailed": "Failed to initialize rule:",
+			"saveStorageFailed": "Failed to save rule to storage:",
+			"saveCustomStylesFailed": "Failed to save custom styles to storage:"
+		},
+		"fileSystem": {
+			"importFailed": "File import failed:",
+			"markdownExportFailed": "Markdown export failed:",
+			"htmlExportFailed": "HTML export failed:",
+			"pdfExportFailed": "PDF export failed:"
+		},
+		"document": {
+			"saveFailed": "Failed to save document:",
+			"loadFailed": "Failed to load document:"
+		},
+		"settings": {
+			"saveFailed": "Failed to save settings:",
+			"loadFailed": "Failed to load settings:"
+		},
+		"parser": {
+			"markdownParseFailed": "Markdown parse failed:",
+			"markdownParseError": "Markdown parse error:"
+		},
+		"paginator": {
+			"paginateFailed": "Pagination failed:"
+		}
+	}
+}

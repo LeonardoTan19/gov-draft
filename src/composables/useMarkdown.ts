@@ -8,6 +8,7 @@ import { watch } from 'vue'
 import { MarkdownParser, type MarkdownOptions } from '../core/parser/markdown-parser'
 import { useDocumentStore } from '../stores/doc'
 import { useRuleStore } from '../stores/rule'
+import { i18n } from '../locales'
 
 /**
  * useMarkdown 组合式函数
@@ -18,6 +19,7 @@ import { useRuleStore } from '../stores/rule'
 export function useMarkdown() {
   const docStore = useDocumentStore()
   const ruleStore = useRuleStore()
+  const t = i18n.global.t
   const parser = new MarkdownParser()
 
   /**
@@ -54,7 +56,7 @@ export function useMarkdown() {
         const html = parse(newContent)
         docStore.updateHtml(html)
       } catch (error) {
-        console.error('Markdown 解析失败:', error)
+        console.error(t('logs.parser.markdownParseFailed'), error)
         // 解析失败时，保持原有 HTML 不变
       }
     },

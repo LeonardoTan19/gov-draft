@@ -1,26 +1,32 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Settings } from 'lucide-vue-next'
 import { useRuleStore } from '../../stores/rule'
+import { setLocale, type SupportedLocale } from '../../locales'
 import RuleSettingsPanel from '../Settings/RuleSettingsPanel.vue'
 
 const ruleStore = useRuleStore()
-const currentRuleName = computed(() => ruleStore.currentRule?.name || '未加载')
+const { t, locale } = useI18n()
+const currentRuleName = computed(() => ruleStore.currentRule?.name || t('topbar.unloaded'))
 const showSettingsPanel = ref(false)
 
 const parserSummary = computed(() => {
   const parser = ruleStore.currentRule?.parser
   if (!parser) {
-    return '未加载解析策略'
+    return t('topbar.parserUnloaded')
   }
 
   const disabledSyntax = parser.disabledSyntax ?? []
 
   const disabled = disabledSyntax.length > 0
-    ? disabledSyntax.join('、')
-    : '无'
+    ? disabledSyntax.join(t('topbar.disabledSyntaxDelimiter'))
+    : t('topbar.none')
 
-  return `标题编号: ${parser.headingNumbering ? '开启' : '关闭'} ｜ 禁用语法: ${disabled}`
+  return t('topbar.parserSummary', {
+    headingNumbering: parser.headingNumbering ? t('topbar.enabled') : t('topbar.disabled'),
+    disabled
+  })
 })
 
 const openSettings = () => {
@@ -30,22 +36,51 @@ const openSettings = () => {
 const closeSettings = () => {
   showSettingsPanel.value = false
 }
+
+const handleSwitchLanguage = (nextLocale: SupportedLocale) => {
+  setLocale(nextLocale)
+}
 </script>
 
 <template>
   <header class="topbar">
     <h1 class="topbar__title">
-      gov-draft 公文排版系统
+      {{ t('topbar.title') }}
     </h1>
 
     <div class="topbar__right">
+      <div
+        class="rule-tooltip"
+        role="group"
+        :aria-label="t('topbar.languageSwitcherAria')"
+      >
+        <button
+          class="btn btn--ghost"
+          type="button"
+          :disabled="locale === 'en'"
+          :title="t('topbar.switchToEn')"
+          @click="handleSwitchLanguage('en')"
+        >
+          {{ t('topbar.langEn') }}
+        </button>
+        <button
+          class="btn btn--ghost"
+          type="button"
+          :disabled="locale === 'zh-CN'"
+          :title="t('topbar.switchToZhCN')"
+          @click="handleSwitchLanguage('zh-CN')"
+        >
+          {{ t('topbar.langZhCN') }}
+        </button>
+      </div>
+
       <div class="rule-tooltip">
         <button
           class="btn btn--rule btn--with-icon"
           @click="openSettings"
         >
           <Settings class="icon" />
-          标准：{{ currentRuleName }}
+          {{ t('topbar.ruleLabel') }}：{{ currentRuleName }}
         </button>
         <div class="rule-tooltip__content">
           {{ parserSummary }}

@@ -2,6 +2,7 @@ import { type Extension, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { setSugarHoveredLineEffect } from './sugarFoldExtension';
 import { clearLockedSugarLine, setLockedSugarLine } from './sugarHoverLock';
+import { i18n } from '../../../../locales';
 
 const SUGAR_OPEN_PATTERN = /^\s*:::\s+\S/;
 const SUGAR_CLOSE_PATTERN = /^\s*:::\s*$/;
@@ -373,7 +374,7 @@ function serializeColor(color: RgbaColor, shell: ColorShell): string {
     const blue = toByteHex(color.b);
     const alpha = toByteHex(color.a * 255);
 
-    let payload = '';
+    let payload: string;
     if (shell.digits === 3) {
       payload = `${toNibbleHex(color.r)}${toNibbleHex(color.g)}${toNibbleHex(color.b)}`;
     } else if (shell.digits === 4) {
@@ -1051,13 +1052,14 @@ class ColorPreviewWidget extends WidgetType {
   }
 
   toDOM(): HTMLElement {
+    const t = i18n.global.t;
     const container = document.createElement('span');
     container.className = 'cm-color-preview';
 
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'cm-color-swatch';
-    swatch.setAttribute('aria-label', '打开颜色选择器');
+    swatch.setAttribute('aria-label', t('codemirror.openColorPicker'));
     swatch.style.backgroundColor = this.initialColor;
 
     swatch.addEventListener('click', (event) => {
