@@ -1,0 +1,143 @@
+/**
+ * 标准（Rule）与样式配置相关类型定义
+ */
+
+export type CssLengthUnit = 'mm' | 'cm' | 'in' | 'pt' | 'px' | 'em' | 'rem' | '%';
+export type CssLength = `${number}${CssLengthUnit}` | '0';
+export type CssColor = `#${string}` | `rgb(${string})` | `rgba(${string})` | `hsl(${string})` | `hsla(${string})`;
+export type CssLineHeight = `${number}` | CssLength;
+export type CssParagraphSpacing = CssLength | `${number}lines`;
+export type FontWeightValue = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
+export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'h4';
+export type TextAlign = 'left' | 'center' | 'right' | 'justify';
+export type DisabledSyntax = 'codeBlock' | 'blockquote' | 'unorderedList' | 'horizontalRule';
+export type LocalStyleTargetPath =
+  | 'content.body.paragraph.indent'
+  | 'content.h1.paragraph.indent'
+  | 'content.h2.paragraph.indent'
+  | 'content.h3.paragraph.indent'
+  | 'content.h4.paragraph.indent';
+
+export interface TextFontConfig {
+  family: string;
+}
+
+export interface TextStyleConfig {
+  size: CssLength;
+  weight: FontWeightValue;
+  color: CssColor;
+}
+
+export interface ParagraphSpacingConfig {
+  lineHeight: CssLineHeight;
+  before: CssParagraphSpacing;
+  after: CssParagraphSpacing;
+}
+
+export interface ParagraphConfig {
+  align: TextAlign;
+  indent: CssLength;
+  spacing: ParagraphSpacingConfig;
+}
+
+export interface ContentItemConfig {
+  fonts: TextFontConfig;
+  style: TextStyleConfig;
+  paragraph: ParagraphConfig;
+  numberingStyle?: string;
+}
+
+export interface ContentConfig {
+  body: ContentItemConfig;
+  h1: ContentItemConfig;
+  h2: ContentItemConfig;
+  h3: ContentItemConfig;
+  h4: ContentItemConfig;
+}
+
+export interface ColorConfig {
+  text: CssColor;
+  background: CssColor;
+  accent: CssColor;
+}
+
+export interface PageConfig {
+  size: 'A4' | 'A3' | 'Letter';
+  orientation: 'portrait' | 'landscape';
+  margins: {
+    top: CssLength;
+    right: CssLength;
+    bottom: CssLength;
+    left: CssLength;
+  };
+}
+
+export interface ParserConfig {
+  html?: boolean;
+  breaks?: boolean;
+  linkify?: boolean;
+  typographer?: boolean;
+  headingNumbering: boolean;
+  disabledSyntax: DisabledSyntax[];
+  localStyleAliases?: Record<string, LocalStyleTargetPath>;
+}
+
+export interface StyleDeclaration {
+  property: string;
+  value: string;
+}
+
+export interface StyleRule {
+  type: 'style';
+  selectors: string[];
+  declarations: StyleDeclaration[];
+}
+
+export interface AtRule {
+  type: 'at-rule';
+  name: string;
+  prelude?: string;
+  declarations?: StyleDeclaration[];
+  children?: StyleNode[];
+}
+
+export type StyleNode = StyleRule | AtRule;
+
+export interface RuleConfig {
+  name: string;
+  version: string;
+  description?: string;
+  content: ContentConfig;
+  colors: ColorConfig;
+  page: PageConfig;
+  parser: ParserConfig;
+}
+
+export interface CompiledRule {
+  tokens: Record<string, string>;
+  rules: StyleNode[];
+  cssText: string;
+}
+
+export interface ValidationIssue {
+  level: 'error' | 'warning';
+  path: string;
+  message: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  issues: ValidationIssue[];
+}
+
+export interface Rule {
+  id: string;
+  name: string;
+  version: string;
+  description?: string;
+  content: ContentConfig;
+  colors: ColorConfig;
+  page: PageConfig;
+  parser: ParserConfig;
+}

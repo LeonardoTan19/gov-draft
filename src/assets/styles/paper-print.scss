@@ -1,0 +1,69 @@
+@page {
+	size: A4 portrait;
+	margin: 0;
+}
+
+@media print {
+	html,
+	body,
+	#app,
+	.app-shell {
+		height: auto;
+		background: #fff;
+	}
+
+	.topbar,
+	.toolbar,
+	.editor-panel,
+	.statusbar {
+		display: none !important;
+	}
+
+	.workspace {
+		display: block;
+	}
+
+	.preview-panel .panel__header,
+	.paper-measure {
+		display: none !important;
+	}
+
+	.preview-panel,
+	.paper-stage {
+		border: 0;
+		border-radius: 0;
+		margin: 0;
+		padding: 0;
+		overflow: visible;
+		background: #fff;
+	}
+
+	.paper-stack {
+		display: block;
+	}
+
+	.paper-sheet {
+		width: 210mm;
+		height: 297mm;
+		min-height: 297mm;
+		margin: 0 auto;
+		padding: var(--page-margin-top, 37mm) var(--page-margin-right, 26mm)
+			var(--page-margin-bottom, 35mm) var(--page-margin-left, 28mm);
+		box-shadow: none;
+		border-radius: 0;
+		break-after: page;
+		page-break-after: always;
+	}
+
+	.paper-sheet:last-child {
+		break-after: auto;
+		page-break-after: auto;
+	}
+
+	.preview-content {
+		color: #000;
+		background: #fff;
+		break-inside: auto;
+	}
+}
+

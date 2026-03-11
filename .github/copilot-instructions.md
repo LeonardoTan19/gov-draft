@@ -6,7 +6,7 @@
 
 ## 技术与目录约定
 - 前端框架：Vue 3（`<script setup>`）、Pinia。
-- 主题引擎核心：`src/core/theme-engine/`。
+- 标准引擎核心：`src/core/rule-engine/`。
 - 类型定义：`src/types/`。
 - 组合式函数：`src/composables/`。
 - 状态管理：`src/stores/`。
@@ -18,9 +18,9 @@
 - 优先复用已有模块与工具函数，避免重复实现。
 - 不新增内联注释，除非逻辑复杂且必须解释。
 
-## 主题系统改动规则
+## 标准系统改动规则
 - 编译产物使用结构化模型：`tokens`、`rules`、`cssText`。
-- 预览与导出样式保持同源（同一份主题编译结果）。
+- 预览与导出样式保持同源（同一份标准编译结果）。
 - 选择器作用域优先使用 `scopeSelectors`，避免手写重复选择器。
 - 校验逻辑集中在 `validator.ts`，避免在 UI 层重复校验。
 
