@@ -32,4 +32,11 @@
 	.paper-stack {
 		display: block;
 	}
+
+	.paper-sheet,
+	.paper-page {
+		box-shadow: none !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+	}
 }
