@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import type { HeadingLevel, ParserConfig } from '../../types/rule';
+import { i18n } from '../../locales';
 import { toCssCustomProperty } from '../rule-engine/css-variable';
 import { sanitizeCssValue } from '../utils/css-sanitize-utils';
 import { resolveCanonicalLocalStylePath } from '../utils/local-style-path-utils';
@@ -65,8 +66,11 @@ export class MarkdownParser {
       const numberedTokens = this.applyHeadingNumbering(tokens, headingStyles);
       return this.md.renderer.render(numberedTokens, this.md.options, {});
     } catch (error) {
-      console.error('Markdown 解析错误:', error);
-      throw new Error(`Markdown 解析失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      const t = i18n.global.t;
+      console.error(t('logs.parser.markdownParseError'), error);
+      throw new Error(t('errors.parser.markdownParseFailed', {
+        details: error instanceof Error ? error.message : t('errors.common.unknownError')
+      }));
     }
   }
 

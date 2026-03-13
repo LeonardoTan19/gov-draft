@@ -29,3 +29,18 @@ export interface PreviewSettings {
   /** 是否显示标尺 */
   showRulers: boolean
 }
+
+/**
+ * 导出类型
+ */
+export type ExportType = 'pdf' | 'html' | 'markdown'
+
+/**
+ * 导出设置
+ */
+export interface ExportSettings {
+  /** 默认导出类型 */
+  defaultType: ExportType
+  /** PDF 是否导出文字层 */
+  pdfTextLayer: boolean
+}
