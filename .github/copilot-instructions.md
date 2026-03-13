@@ -31,6 +31,39 @@
 - 线上问题从 `main` 创建 `hotfix/*`，修复后同时合并到 `main` 与 `develop`。
 - 历史改写仅在必要时进行，优先使用 `--force-with-lease` 并先保留备份分支。
 
+## GitNexus 工具使用指南
+
+项目已启用 **GitNexus MCP**，用于修改代码前后的影响分析和代码理解。
+
+### 快速开始
+```bash
+npx gitnexus analyze           # 首次索引仓库
+npx gitnexus analyze --force   # 更新索引
+```
+
+### 核心工具
+
+| 场景 | 工具 | 用法 |
+|------|------|------|
+| 理解代码逻辑 | `query()` | `query({query: "导出 PDF"})` |
+| 评估修改影响 | `impact()` | `impact({target: "exportPdf", direction: "upstream"})` |
+| 查看符号关系 | `context()` | `context({name: "useFileSystem"})` |
+| 修改后验证 | `detect_changes()` | `detect_changes({scope: "staged"})` |
+| 安全重命名 | `rename()` | `rename({symbol_name: "old", new_name: "new", dry_run: true})` |
+
+### 风险判断（impact 结果）
+
+- **d=1（WILL BREAK）**：直接调用者必须更新
+- **d=2（LIKELY AFFECTED）**：应该测试
+- **d=3（MAY NEED TESTING）**：准备回归测试
+- **HIGH/CRITICAL 风险**：修改前必须确认
+
+### 典型工作流
+
+**修改导出逻辑** → `context({name: "exportPdf"})` → `impact({target: "useFileSystem", direction: "upstream"})` → 修改 → `detect_changes()` → `pnpm test`
+
+**修改规则验证** → `query({query: "validator"})` → `impact({target: "validator.ts", direction: "upstream"})` → 修改 → `detect_changes()` → `pnpm test`
+
 ## 输出偏好
 - 回答使用中文。
 - 先给结果，再给关键改动点、验证情况和必要的后续建议。

@@ -1,0 +1,131 @@
+.export-dialog-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, #0b1220 40%, transparent);
+}
+
+.export-dialog {
+  width: min(520px, 100%);
+  max-height: min(620px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 12px 32px var(--tooltip-shadow);
+}
+
+.export-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.export-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.export-dialog__body {
+  padding: 12px 14px 14px;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+}
+
+.export-dialog__section {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.export-dialog__section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.export-dialog__select {
+  position: relative;
+  display: grid;
+}
+
+.export-dialog__select-input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+
+  &:focus {
+    outline: none;
+    border-color: var(--brand-secondary);
+  }
+}
+
+.export-dialog__select-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-secondary);
+}
+
+.export-dialog__checkbox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
+.export-dialog__hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.export-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (width <= 640px) {
+  .export-dialog-shell {
+    padding: 12px;
+  }
+
+  .export-dialog {
+    max-height: calc(100vh - 24px);
+  }
+}

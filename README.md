@@ -31,7 +31,15 @@ pnpm build
 pnpm preview
 pnpm lint
 pnpm lint:fix
+pnpm pdf:inspect -- ./path/to/exported.pdf
 pnpm test
+```
+
+导出 PDF 排障时，可以用下面的命令直接验证文件是否可解析、是否能提取文字层：
+
+```bash
+pnpm pdf:inspect -- ./path/to/exported.pdf
+pnpm pdf:inspect -- ./path/to/exported.pdf --json
 ```
 
 ## 文档入口

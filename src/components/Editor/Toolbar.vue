@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDocumentStore } from '../../stores/doc'
 import { useFileSystem } from '../../composables/useFileSystem'
-import { Download, FileImage, FileText, Code, FileUp, Redo2, Undo2 } from 'lucide-vue-next'
+import { Download, FileUp, Redo2, Undo2 } from 'lucide-vue-next'
+import ExportDialog from '../Export/ExportDialog.vue'
 
 const props = defineProps<{
   canUndo: boolean
@@ -18,44 +19,19 @@ const emit = defineEmits<{
 
 const docStore = useDocumentStore()
 const { t } = useI18n()
-const { exportMarkdown, exportHtml, exportPdf, importFile } = useFileSystem()
+const { importFile } = useFileSystem()
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const exportMenuRef = ref<HTMLElement | null>(null)
-const isExportMenuOpen = ref(false)
+const isExportDialogOpen = ref(false)
 
-const closeExportMenu = () => {
-  isExportMenuOpen.value = false
+const closeExportDialog = () => {
+  isExportDialogOpen.value = false
 }
 
-const toggleExportMenu = () => {
-  isExportMenuOpen.value = !isExportMenuOpen.value
-}
-
-type ExportType = 'markdown' | 'html' | 'pdf'
-
-const handleExport = (type: ExportType) => {
-  if (type === 'markdown') {
-    exportMarkdown(docStore.content, 'document.md')
-  } else if (type === 'html') {
-    exportHtml(docStore.html, 'document.html')
-  } else {
-    exportPdf()
-  }
-
-  closeExportMenu()
-}
-
-const handleDocumentClick = (event: MouseEvent) => {
-  const menuElement = exportMenuRef.value
-  if (!menuElement || !isExportMenuOpen.value) {
-    return
-  }
-
-  const target = event.target as Node | null
-  if (target && !menuElement.contains(target)) {
-    closeExportMenu()
-  }
+const openExportDialog = () => {
+  console.log('openExportDialog called')
+  isExportDialogOpen.value = true
+  console.log('isExportDialogOpen set to:', isExportDialogOpen.value)
 }
 
 const triggerFileInput = () => {
@@ -78,14 +54,6 @@ const handleImportFile = async (event: Event) => {
     target.value = ''
   }
 }
-
-onMounted(() => {
-  document.addEventListener('click', handleDocumentClick)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick)
-})
 </script>
 
 <template>
@@ -133,47 +101,14 @@ onBeforeUnmount(() => {
         @change="handleImportFile"
       >
 
-      <div
-        ref="exportMenuRef"
-        class="export-menu"
+      <button
+        class="btn btn--secondary btn--with-icon"
+        type="button"
+        @click.stop="openExportDialog"
       >
-        <button
-          class="btn btn--secondary btn--with-icon"
-          type="button"
-          @click="toggleExportMenu"
-        >
-          <Download class="icon" />
-          {{ t('toolbar.export') }}
-        </button>
-        <transition name="export-menu-transition">
-          <div
-            v-if="isExportMenuOpen"
-            class="export-menu__content"
-          >
-            <button
-              class="export-menu__item btn--with-icon"
-              @click="handleExport('markdown')"
-            >
-              <FileText class="icon icon--sm" />
-              {{ t('toolbar.exportMarkdown') }}
-            </button>
-            <button
-              class="export-menu__item btn--with-icon"
-              @click="handleExport('html')"
-            >
-              <Code class="icon icon--sm" />
-              {{ t('toolbar.exportHtml') }}
-            </button>
-            <button
-              class="export-menu__item btn--with-icon"
-              @click="handleExport('pdf')"
-            >
-              <FileImage class="icon icon--sm" />
-              {{ t('toolbar.exportPdf') }}
-            </button>
-          </div>
-        </transition>
-      </div>
+        <Download class="icon" />
+        {{ t('toolbar.export') }}
+      </button>
     </div>
 
     <div
@@ -183,6 +118,11 @@ onBeforeUnmount(() => {
       <span class="meta-pill">{{ t('toolbar.wordCount', { count: docStore.getWordCount }) }}</span>
       <span class="meta-pill">{{ t('toolbar.charCount', { count: docStore.getCharCount }) }}</span>
     </div>
+
+    <ExportDialog
+      :visible="isExportDialogOpen"
+      @close="closeExportDialog"
+    />
   </section>
 </template>
 
