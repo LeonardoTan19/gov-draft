@@ -21,6 +21,31 @@
   gap: 10px;
 }
 
+.topbar__theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--glass-bg);
+}
+
+.topbar__theme-btn {
+  min-width: 56px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.topbar__theme-btn[data-state='active'] {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--text-on-brand);
+}
+
 .topbar__title {
   margin: 0;
   font-size: 20px;

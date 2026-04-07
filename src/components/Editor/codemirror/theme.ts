@@ -13,21 +13,26 @@ export const editorTheme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: "'JetBrains Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
     lineHeight: '1.75',
+    color: 'var(--text-primary)',
+    background: 'var(--panel-bg)',
     overflow: 'auto'
   },
   '.cm-content': {
     padding: '14px',
-    caretColor: '#0f172a'
+    color: 'var(--text-primary)',
+    background: 'var(--panel-bg)',
+    caretColor: 'var(--text-primary)'
   },
   '&.cm-focused .cm-cursor': {
-    borderLeftColor: '#0f172a'
+    borderLeftColor: 'var(--text-primary)'
   },
   '&.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: '#d7e4f2'
+    backgroundColor: 'hsl(var(--primary) / 0.24)'
   },
   '.cm-gutters': {
     border: '0',
-    background: '#ffffff'
+    color: 'var(--text-secondary)',
+    background: 'var(--panel-bg)'
   },
   '.cm-heading-fold-gutter': {
     width: '24px'
@@ -38,7 +43,7 @@ export const editorTheme = EditorView.theme({
     height: '16px',
     border: '0',
     background: 'transparent',
-    color: '#475569',
+    color: 'var(--text-secondary)',
     fontSize: '12px',
     lineHeight: '16px',
     padding: '0'
@@ -163,12 +168,12 @@ export const editorTheme = EditorView.theme({
   '.cm-color-picker-panel': {
     position: 'absolute',
     width: '220px',
-    background: '#252526',
-    border: '1px solid #3c3c3c',
+    background: 'var(--panel-bg)',
+    border: '1px solid var(--border-color)',
     borderRadius: '6px',
     padding: '10px',
     zIndex: '40',
-    boxShadow: '0 6px 20px #00000066',
+    boxShadow: 'var(--shadow-lg)',
     display: 'none',
     flexDirection: 'column',
     gap: '8px'
@@ -183,9 +188,9 @@ export const editorTheme = EditorView.theme({
     width: '100%',
     height: '20px',
     borderRadius: '3px',
-    border: '1px solid #00000080',
+    border: '1px solid var(--border-color)',
     backgroundImage:
-      'linear-gradient(45deg, #3c3c3c 25%, transparent 25%), linear-gradient(-45deg, #3c3c3c 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #3c3c3c 75%), linear-gradient(-45deg, transparent 75%, #3c3c3c 75%)',
+      'linear-gradient(45deg, var(--border-color) 25%, transparent 25%), linear-gradient(-45deg, var(--border-color) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--border-color) 75%), linear-gradient(-45deg, transparent 75%, var(--border-color) 75%)',
     backgroundSize: '10px 10px',
     backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px'
   },
@@ -194,7 +199,7 @@ export const editorTheme = EditorView.theme({
     width: '100%',
     height: '120px',
     borderRadius: '3px',
-    border: '1px solid #00000080',
+    border: '1px solid var(--border-color)',
     cursor: 'crosshair',
     backgroundImage:
       'linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent)'
@@ -204,8 +209,8 @@ export const editorTheme = EditorView.theme({
     width: '10px',
     height: '10px',
     borderRadius: '50%',
-    border: '1px solid #ffffff',
-    boxShadow: '0 0 0 1px #00000066',
+    border: '1px solid var(--panel-bg)',
+    boxShadow: '0 0 0 1px var(--tooltip-shadow)',
     transform: 'translate(-50%, -50%)',
     pointerEvents: 'none'
   },
@@ -227,7 +232,7 @@ export const editorTheme = EditorView.theme({
   '.cm-color-panel-range::-webkit-slider-runnable-track': {
     height: '8px',
     borderRadius: '999px',
-    border: '1px solid #00000099'
+    border: '1px solid var(--border-color)'
   },
   '.cm-color-panel-hue::-webkit-slider-runnable-track': {
     background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
@@ -240,15 +245,15 @@ export const editorTheme = EditorView.theme({
     width: '12px',
     height: '12px',
     borderRadius: '50%',
-    border: '1px solid #000000cc',
-    background: '#f5f5f5',
+    border: '1px solid var(--border-color)',
+    background: 'var(--panel-bg)',
     marginTop: '-3px',
     boxShadow: '0 0 0 1px #ffffff66'
   },
   '.cm-color-panel-range::-moz-range-track': {
     height: '8px',
     borderRadius: '999px',
-    border: '1px solid #00000099'
+    border: '1px solid var(--border-color)'
   },
   '.cm-color-panel-hue::-moz-range-track': {
     background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
@@ -260,22 +265,22 @@ export const editorTheme = EditorView.theme({
     width: '12px',
     height: '12px',
     borderRadius: '50%',
-    border: '1px solid #000000cc',
-    background: '#f5f5f5',
+    border: '1px solid var(--border-color)',
+    background: 'var(--panel-bg)',
     boxShadow: '0 0 0 1px #ffffff66'
   },
   '.cm-color-panel-text': {
     width: '100%',
     height: '28px',
-    border: '1px solid #3c3c3c',
+    border: '1px solid var(--border-color)',
     borderRadius: '3px',
-    background: '#1e1e1e',
-    color: '#cccccc',
+    background: 'var(--app-bg)',
+    color: 'var(--text-primary)',
     padding: '0 8px',
     fontSize: '12px',
     outline: 'none'
   },
   '.cm-color-panel-text:focus': {
-    borderColor: '#007acc'
+    borderColor: 'var(--brand-primary)'
   }
 });
