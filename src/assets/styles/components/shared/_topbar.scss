@@ -1,4 +1,6 @@
-@use '../utilities/breakpoints' as bp;
+@use '../../base/tokens' as *;
+@use '../../utilities/breakpoints' as bp;
+@use '../../mixins/animation' as anim;
 
 .topbar {
   display: flex;
@@ -9,7 +11,7 @@
   padding: 14px 18px;
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .topbar__right {
@@ -40,16 +42,18 @@
   min-width: 260px;
   max-width: min(420px, 88vw);
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--tooltip-bg);
   color: var(--tooltip-text);
   font-size: 12px;
   line-height: 1.5;
-  box-shadow: 0 8px 20px var(--tooltip-shadow);
+  box-shadow: var(--shadow-md);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-2px);
-  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+
+  @include anim.interactive-transition(opacity, transform, visibility);
+
   pointer-events: none;
 }
 

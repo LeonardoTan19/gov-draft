@@ -1,3 +1,10 @@
+:root {
+  --font-family-ui-sans: 'PingFang SC', 'Microsoft YaHei', -apple-system, 'BlinkMacSystemFont', 'Segoe UI', sans-serif;
+  --font-family-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  --font-family-content-cjk: '仿宋_GB2312', 'FangSong_GB2312', '仿宋', serif;
+  --font-family-content-latin: 'Times New Roman', 'TimesNewRomanPSMT', serif;
+}
+
 @font-face {
   font-family: 'Times New Roman';
   src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('TimesNewRoman');

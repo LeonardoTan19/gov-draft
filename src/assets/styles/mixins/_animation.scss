@@ -1,0 +1,34 @@
+@use 'sass:list';
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@mixin interactive-transition($properties...) {
+  $transitions: ();
+
+  @each $property in $properties {
+    $item: #{$property} var(--duration-normal) var(--easing-standard);
+    $transitions: list.append($transitions, $item, comma);
+  }
+
+  transition: $transitions;
+}
