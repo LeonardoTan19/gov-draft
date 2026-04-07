@@ -1,0 +1,19 @@
+@use '../base/tokens' as *;
+
+@each $name, $value in $text-color-utilities {
+  .text-#{$name} {
+    color: $value;
+  }
+}
+
+@each $name, $value in $background-color-utilities {
+  .bg-#{$name} {
+    background: $value;
+  }
+}
+
+@each $name, $value in $border-color-utilities {
+  .border-#{$name} {
+    border-color: $value;
+  }
+}

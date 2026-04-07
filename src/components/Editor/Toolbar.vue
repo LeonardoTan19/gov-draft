@@ -186,4 +186,4 @@ onBeforeUnmount(() => {
   </section>
 </template>
 
-<style scoped src="../../assets/styles/components/toolbar.scss" lang="scss"></style>
+<style scoped src="../../assets/styles/components/shared/_toolbar.scss" lang="scss"></style>

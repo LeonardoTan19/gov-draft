@@ -1,4 +1,5 @@
 @use '../utilities/breakpoints' as bp;
+@use '../base/tokens' as *;
 
 .paper-stage {
 	flex: 1;
@@ -10,7 +11,7 @@
 	-webkit-overflow-scrolling: touch;
 	touch-action: pan-x pan-y;
 	cursor: grab;
-	background: #edf1f7;
+	background: var(--stage-bg);
 }
 
 .paper-stage.is-dragging {
@@ -24,12 +25,12 @@
 }
 
 .paper-stage::-webkit-scrollbar-track {
-	background: #dbe3ef;
+	background: var(--stage-scrollbar-track);
 	border-radius: 999px;
 }
 
 .paper-stage::-webkit-scrollbar-thumb {
-	background: #9fb2cc;
+	background: var(--stage-scrollbar-thumb);
 	border-radius: 999px;
 }
 
@@ -41,12 +42,12 @@
 	margin: 0 auto;
 	padding: var(--page-margins-top, 37mm) var(--page-margins-right, 26mm)
 		var(--page-margins-bottom, 35mm) var(--page-margins-left, 28mm);
-	background: #fff;
-	color: #111827;
+	background: var(--paper-bg);
+	color: var(--paper-text);
 	overflow: hidden;
 	box-shadow:
-		0 16px 40px rgba(15, 23, 42, 0.12),
-		0 2px 6px rgba(15, 23, 42, 0.06);
+		var(--paper-shadow-lg),
+		var(--paper-shadow-sm);
 }
 
 .paper-pagination {
@@ -96,7 +97,7 @@
 }
 
 .paper-sheet.preview-content {
-	font-family: var(--content-body-fonts-cjk-family, '仿宋_GB2312', serif);
+	font-family: var(--content-body-fonts-cjk-family, var(--font-family-content-cjk));
 	font-size: var(--content-body-style-size, 16pt);
 	line-height: var(--content-body-paragraph-spacing-line-height, 1.8);
 	cursor: grab;

@@ -96,4 +96,4 @@ const handleSwitchLanguage = (nextLocale: SupportedLocale) => {
   </header>
 </template>
 
-<style scoped src="../../assets/styles/components/topbar.scss" lang="scss"></style>
+<style scoped src="../../assets/styles/components/shared/_topbar.scss" lang="scss"></style>
