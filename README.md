@@ -4,9 +4,17 @@
 
 ## 环境要求
 
-- Node.js 20+
-- pnpm 9+
+## 功能
 
+- Markdown 编辑与实时预览
+- 基于 YAML 规则的样式编译
+- 分页、页边距和页码配置
+- Markdown 导入，HTML/PDF 导出
+- 内置规则设置与中英文界面切换
+主页图：
+![alt text](images/index.png)
+导出效果图：
+![alt text](images/export.png)
 ## 快速开始
 
 ```bash
