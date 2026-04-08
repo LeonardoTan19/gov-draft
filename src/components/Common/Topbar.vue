@@ -5,6 +5,7 @@ import { Settings } from 'lucide-vue-next'
 import { useRuleStore } from '../../stores/rule'
 import { setLocale, type SupportedLocale } from '../../locales'
 import RuleSettingsPanel from '../Settings/RuleSettingsPanel.vue'
+import brandIconUrl from '/gov-draft.svg'
 
 type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -82,9 +83,24 @@ onMounted(() => {
 
 <template>
   <header class="topbar">
-    <h1 class="topbar__title">
-      {{ t('topbar.title') }}
-    </h1>
+    <div class="topbar__brand">
+      <img
+        class="topbar__brand-icon"
+        :src="brandIconUrl"
+        alt="GovDraft logo"
+      >
+      <div
+        class="topbar__brand-text"
+        aria-label="GovDraft brand"
+      >
+        <h1 class="topbar__brand-title">
+          GovDraft
+        </h1>
+        <p class="topbar__brand-subtitle">
+          Made by Leonardo Tan
+        </p>
+      </div>
+    </div>
 
     <div class="topbar__right">
       <div
