@@ -5,7 +5,7 @@
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { EditorSettings, PreviewSettings } from '../types/settings'
+import type { EditorSettings, PreviewSettings, ExportSettings } from '../types/settings'
 import { i18n } from '../locales'
 
 /**
@@ -23,17 +23,23 @@ export const useSettingsStore = defineStore('settings', () => {
     wordWrap: true,
     tabSize: 2
   })
-  
+
   /** 预览设置 */
   const previewSettings = ref<PreviewSettings>({
     zoom: 100,
     showPageBreaks: true,
     showRulers: false
   })
-  
+
+  /** 导出设置 */
+  const exportSettings = ref<ExportSettings>({
+    defaultType: 'pdf',
+    pdfTextLayer: false
+  })
+
   /** 是否启用自动保存 */
   const autoSave = ref<boolean>(true)
-  
+
   /** 自动保存间隔（毫秒） */
   const autoSaveInterval = ref<number>(30000) // 默认 30 秒
 
@@ -42,12 +48,12 @@ export const useSettingsStore = defineStore('settings', () => {
    * 更新编辑器设置
    * @param settings - 部分或完整的编辑器设置对象
    */
-  function updateEditorSettings(settings: Partial<EditorSettings>): void {
+  const updateEditorSettings = (settings: Partial<EditorSettings>): void => {
     editorSettings.value = {
       ...editorSettings.value,
       ...settings
     }
-    
+
     // 保存到 localStorage
     saveSettings()
   }
@@ -56,12 +62,12 @@ export const useSettingsStore = defineStore('settings', () => {
    * 更新预览设置
    * @param settings - 部分或完整的预览设置对象
    */
-  function updatePreviewSettings(settings: Partial<PreviewSettings>): void {
+  const updatePreviewSettings = (settings: Partial<PreviewSettings>): void => {
     previewSettings.value = {
       ...previewSettings.value,
       ...settings
     }
-    
+
     // 保存到 localStorage
     saveSettings()
   }
@@ -70,9 +76,9 @@ export const useSettingsStore = defineStore('settings', () => {
    * 设置自动保存
    * @param enabled - 是否启用自动保存
    */
-  function setAutoSave(enabled: boolean): void {
+  const setAutoSave = (enabled: boolean): void => {
     autoSave.value = enabled
-    
+
     // 保存到 localStorage
     saveSettings()
   }
@@ -81,14 +87,28 @@ export const useSettingsStore = defineStore('settings', () => {
    * 设置自动保存间隔
    * @param interval - 自动保存间隔（毫秒）
    */
-  function setAutoSaveInterval(interval: number): void {
+  const setAutoSaveInterval = (interval: number): void => {
     if (interval < 1000) {
       console.warn('自动保存间隔不能小于 1 秒')
       return
     }
-    
+
     autoSaveInterval.value = interval
-    
+
+    // 保存到 localStorage
+    saveSettings()
+  }
+
+  /**
+   * 更新导出设置
+   * @param settings - 部分或完整的导出设置对象
+   */
+  const updateExportSettings = (settings: Partial<ExportSettings>): void => {
+    exportSettings.value = {
+      ...exportSettings.value,
+      ...settings
+    }
+
     // 保存到 localStorage
     saveSettings()
   }
@@ -97,12 +117,12 @@ export const useSettingsStore = defineStore('settings', () => {
    * 加载设置
    * 从 localStorage 加载用户设置
    */
-  function loadSettings(): void {
+  const loadSettings = (): void => {
     try {
       const saved = localStorage.getItem('gov-draft-settings')
       if (saved) {
         const settingsData = JSON.parse(saved)
-        
+
         // 加载编辑器设置
         if (settingsData.editorSettings) {
           editorSettings.value = {
@@ -110,7 +130,7 @@ export const useSettingsStore = defineStore('settings', () => {
             ...settingsData.editorSettings
           }
         }
-        
+
         // 加载预览设置
         if (settingsData.previewSettings) {
           previewSettings.value = {
@@ -118,14 +138,22 @@ export const useSettingsStore = defineStore('settings', () => {
             ...settingsData.previewSettings
           }
         }
-        
+
         // 加载自动保存设置
         if (settingsData.autoSave !== undefined) {
           autoSave.value = settingsData.autoSave
         }
-        
+
         if (settingsData.autoSaveInterval !== undefined) {
           autoSaveInterval.value = settingsData.autoSaveInterval
+        }
+
+        // 加载导出设置
+        if (settingsData.exportSettings) {
+          exportSettings.value = {
+            ...exportSettings.value,
+            ...settingsData.exportSettings
+          }
         }
       }
     } catch (error) {
@@ -137,15 +165,16 @@ export const useSettingsStore = defineStore('settings', () => {
    * 保存设置
    * 将用户设置持久化到 localStorage
    */
-  async function saveSettings(): Promise<void> {
+  const saveSettings = async (): Promise<void> => {
     try {
       const settingsData = {
         editorSettings: editorSettings.value,
         previewSettings: previewSettings.value,
+        exportSettings: exportSettings.value,
         autoSave: autoSave.value,
         autoSaveInterval: autoSaveInterval.value
       }
-      
+
       localStorage.setItem('gov-draft-settings', JSON.stringify(settingsData))
     } catch (error) {
       console.error(t('logs.settings.saveFailed'), error)
@@ -157,7 +186,7 @@ export const useSettingsStore = defineStore('settings', () => {
    * 重置设置
    * 恢复所有设置为默认值
    */
-  function resetSettings(): void {
+  const resetSettings = (): void => {
     editorSettings.value = {
       fontSize: 14,
       colorMode: 'light',
@@ -165,16 +194,21 @@ export const useSettingsStore = defineStore('settings', () => {
       wordWrap: true,
       tabSize: 2
     }
-    
+
     previewSettings.value = {
       zoom: 100,
       showPageBreaks: true,
       showRulers: false
     }
-    
+
+    exportSettings.value = {
+      defaultType: 'pdf',
+      pdfTextLayer: false
+    }
+
     autoSave.value = true
     autoSaveInterval.value = 30000
-    
+
     // 保存到 localStorage
     saveSettings()
   }
@@ -183,12 +217,14 @@ export const useSettingsStore = defineStore('settings', () => {
     // State
     editorSettings,
     previewSettings,
+    exportSettings,
     autoSave,
     autoSaveInterval,
-    
+
     // Actions
     updateEditorSettings,
     updatePreviewSettings,
+    updateExportSettings,
     setAutoSave,
     setAutoSaveInterval,
     loadSettings,

@@ -43,6 +43,21 @@
 		"charCount": "字符 {count}",
 		"importFailed": "文件导入失败"
 	},
+	"exportDialog": {
+		"aria": "导出文档",
+		"title": "导出文档",
+		"close": "关闭",
+		"exportType": "导出类型",
+		"typePdf": "PDF 文档",
+		"typeHtml": "HTML 网页",
+		"typeMarkdown": "Markdown 文本",
+		"pdfTextLayer": "导出文字层（可搜索、可复制）",
+		"pdfTextLayerHint": "启用后将使用浏览器打印功能，生成的 PDF 包含可选择的文字层",
+		"export": "导出",
+		"exporting": "导出中...",
+		"exportFailed": "导出失败，请重试",
+		"cancel": "取消"
+	},
 	"settings": {
 		"dialogAria": "规则配置",
 		"title": "配置中心",
@@ -128,7 +143,8 @@
 		"pdfExportNoPages": "未找到可导出的分页内容，请先确认预览区域已渲染。",
 		"pdfExportFailed": "PDF 导出失败: {message}",
 		"readResultNotString": "文件读取结果不是字符串",
-		"readFileFailed": "文件读取失败"
+		"readFileFailed": "文件读取失败",
+		"popupBlocked": "弹出窗口被拦截，请在浏览器设置中允许弹出窗口"
 	},
 	"errors": {
 		"common": {

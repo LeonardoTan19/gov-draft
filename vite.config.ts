@@ -4,6 +4,14 @@ import { defineConfig } from 'vitest/config'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  },
   build: {
     rollupOptions: {
       output: {
@@ -64,6 +72,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/test/**/*.test.ts', 'src/**/test/**/*.pbt.test.ts'],
+    include: ['src/**/test/**/*.test.ts', 'src/**/test/**/*.pbt.test.ts', 'server/**/*.test.ts'],
   },
 })

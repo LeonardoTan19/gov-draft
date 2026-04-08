@@ -1,8 +1,8 @@
 # gov-draft
 
-公文排版系统（Vue 3 + TypeScript + Vite），支持基于规则的样式编译、预览与导出。
+gov-draft 是一个基于 Vue 3、TypeScript 和 Vite 的公文排版系统，提供 Markdown 编辑、实时预览、规则驱动样式编译、分页，以及 HTML/PDF 导出能力。
 
-## 环境要求
+仓库当前内置 GB/T 9704-2012 公文格式规则，并让预览与导出复用同一份编译结果，减少样式分叉。
 
 ## 功能
 
@@ -17,6 +17,8 @@
 ![alt text](images/export.png)
 ## 快速开始
 
+环境要求：Node.js 20+、pnpm 9+
+
 ```bash
 pnpm install
 pnpm dev
@@ -27,19 +29,37 @@ pnpm dev
 ## 常用命令
 
 ```bash
-pnpm dev          # 启动开发服务器
-pnpm build        # 类型检查并构建
-pnpm preview      # 预览构建产物
-pnpm lint         # 代码与样式检查
-pnpm lint:fix     # 自动修复可修复问题
-pnpm test         # 运行测试
+pnpm dev
+pnpm build
+pnpm preview
+pnpm lint
+pnpm lint:fix
+pnpm pdf:inspect -- ./path/to/exported.pdf
+pnpm test
 ```
 
-## 核心目录
+导出 PDF 排障时，可以用下面的命令直接验证文件是否可解析、是否能提取文字层：
 
-- `src/core/rule-engine/`：规则引擎（编译、作用域、变量、校验）
-- `src/core/parser/`：Markdown 解析
-- `src/composables/`：组合式逻辑
-- `src/stores/`：Pinia 状态管理
-- `src/types/`：类型定义
-- `docs/`：规则与样式架构文档
+```bash
+pnpm pdf:inspect -- ./path/to/exported.pdf
+pnpm pdf:inspect -- ./path/to/exported.pdf --json
+```
+
+## 文档入口
+
+- [docs/rule-yaml-schema.md](docs/rule-yaml-schema.md)：规则 YAML 结构与字段说明
+- [docs/style-architecture.md](docs/style-architecture.md)：样式分层与约定
+- [src/core/builtin-rules/gb-t-9704.yaml](src/core/builtin-rules/gb-t-9704.yaml)：内置主规则
+- [src/core/builtin-rules/gb-t-9704-pagination.yaml](src/core/builtin-rules/gb-t-9704-pagination.yaml)：内置分页规则
+- [.github/copilot-instructions.md](.github/copilot-instructions.md)：Copilot/AI 协作说明
+
+## 开发说明
+
+- 优先做最小改动，避免无关重构。
+- 涉及规则引擎、解析器或状态行为时，优先更新邻近测试。
+- 影响规则格式、命令或用户可见行为时，同步更新文档。
+- 提交前建议运行：`pnpm build`、`pnpm test`、`pnpm lint`
+
+## 许可证
+
+本项目采用 GPL-3.0 许可证，详见 [LICENSE](LICENSE)。
