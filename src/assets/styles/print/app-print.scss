@@ -4,7 +4,7 @@
 	#app,
 	.app-shell {
 		height: auto;
-		background: #fff;
+		background: var(--paper-bg);
 	}
 
 	.topbar,
@@ -26,7 +26,7 @@
 		margin: 0;
 		padding: 0;
 		overflow: visible;
-		background: #fff;
+		background: var(--paper-bg);
 	}
 
 	.paper-stack {

@@ -144,6 +144,7 @@ watch(
   flex: 1;
   display: flex;
   overflow: hidden;
-  background: #fff;
+  color: var(--text-primary);
+  background: var(--panel-bg);
 }
 </style>

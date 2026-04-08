@@ -1,3 +1,5 @@
+@use '../../base/tokens' as *;
+
 .settings-panel {
   position: fixed;
   top: 72px;
@@ -8,9 +10,9 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--panel-bg);
-  box-shadow: 0 8px 20px var(--tooltip-shadow);
+  box-shadow: var(--shadow-md);
 }
 
 .settings-panel__header {
@@ -37,7 +39,7 @@
 
 .settings-block {
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 10px;
   display: grid;
   gap: 8px;
@@ -58,7 +60,7 @@
 
 .settings-subblock {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 8px;
   display: grid;
   gap: 8px;
@@ -87,7 +89,7 @@
 .settings-input,
 .settings-textarea {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--panel-bg);
   color: var(--text-primary);
   padding: 8px;
@@ -97,7 +99,7 @@
 .settings-textarea {
   width: 100%;
   resize: vertical;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
 }
 
 .settings-grid {

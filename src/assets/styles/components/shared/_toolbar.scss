@@ -1,4 +1,6 @@
-@use '../utilities/breakpoints' as bp;
+@use '../../base/tokens' as *;
+@use '../../utilities/breakpoints' as bp;
+@use '../../mixins/animation' as anim;
 
 .toolbar {
   display: flex;
@@ -38,7 +40,7 @@
 
 .meta-pill {
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--status-bg);
   color: var(--status-text);
   font-size: 11px;
@@ -76,7 +78,7 @@
   min-width: 160px;
   padding: 6px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--glass-overlay-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -87,7 +89,7 @@
 
 .export-menu-transition-enter-active,
 .export-menu-transition-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  @include anim.interactive-transition(opacity, transform);
 }
 
 .export-menu-transition-enter-from,
@@ -107,11 +109,12 @@
   background: transparent;
   text-align: left;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+
+  @include anim.interactive-transition(background-color, opacity, color);
 }
 
 .export-menu__item:hover {

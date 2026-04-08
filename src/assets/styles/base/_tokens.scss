@@ -1,0 +1,21 @@
+$text-color-utilities: (
+	'primary': var(--text-primary),
+	'secondary': var(--text-secondary),
+	'brand': var(--brand-primary),
+	'status': var(--status-text),
+	'destructive': var(--btn-rule-text)
+) !default;
+$background-color-utilities: (
+	'app': var(--app-bg),
+	'panel': var(--panel-bg),
+	'preview': var(--preview-bg),
+	'status': var(--status-bg),
+	'muted': var(--hover-bg),
+	'brand': var(--brand-primary)
+) !default;
+$border-color-utilities: (
+	'default': var(--border-color),
+	'brand': var(--brand-primary),
+	'status': var(--status-text),
+	'destructive': var(--btn-rule-border)
+) !default;

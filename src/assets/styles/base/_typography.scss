@@ -1,3 +1,9 @@
+:root {
+  --font-family-ui-sans: '方正标雅宋简体', '华文中宋', 'Times New Roman', 'TimesNewRomanPSMT', serif;
+  --font-family-content-cjk: '仿宋_GB2312', 'FangSong_GB2312', '仿宋', serif;
+  --font-family-content-latin: 'Times New Roman', 'TimesNewRomanPSMT', serif;
+}
+
 @font-face {
   font-family: 'Times New Roman';
   src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('TimesNewRoman');
@@ -99,6 +105,15 @@
   font-family: '黑体';
   src: local('黑体'), local('SimHei'), local('SIMHEI'),
     url('/fonts/SIMHEI.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: '方正标雅宋简体';
+  src: local('方正标雅宋简体'), local('FZBiaoYaSong-S01'), local('FZBiaoYaSong'),
+    url('/fonts/方正标雅宋简体.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
