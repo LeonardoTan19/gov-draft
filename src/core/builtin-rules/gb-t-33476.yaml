@@ -1,0 +1,131 @@
+name: GB/T 33476-2016 党政机关公文格式
+version: 1.0.0
+description: 符合 GB/T 33476-2016《党政机关公文格式》国家标准的公文标准。
+content:
+  body:
+    fonts:
+      latinFamily: Times New Roman, serif
+      cjkFamily: 仿宋_GB2312, FangSong, STFangsong, serif
+      cnQuoteFamily: 方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif
+      cnBookTitleFamily: 方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif
+    style:
+      size: 16pt
+      weight: 400
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+    paragraph:
+      align: justify
+      indent: 2em
+      spacing:
+        lineHeight: 10.39mm
+        before: 0lines
+        after: 0lines
+  h1:
+    sectionStyle: section
+    fonts:
+      latinFamily: Times New Roman, serif
+      cjkFamily: 方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif
+      cnQuoteFamily: 方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif
+      cnBookTitleFamily: 方正小标宋_GBK, 方正小标宋简体, FZXiaoBiaoSong-B05, 黑体, SimHei, STHeiti, sans-serif
+    style:
+      size: 22pt
+      weight: 400
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index:
+    paragraph:
+      align: center
+      indent: 0em
+      spacing:
+        lineHeight: 10.39mm
+        before: 2lines
+        after: 1lines
+  h2:
+    fonts:
+      latinFamily: Times New Roman, serif
+      cjkFamily: 黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif
+      cnQuoteFamily: 黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif
+      cnBookTitleFamily: 黑体, SimHei, STHeiti, Microsoft YaHei, sans-serif
+    style:
+      size: 16pt
+      weight: 400
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index: '{zhHansIndex}、'
+    paragraph:
+      align: left
+      indent: 2em
+      spacing:
+        lineHeight: 10.39mm
+        before: 0lines
+        after: 0lines
+  h3:
+    fonts:
+      latinFamily: Times New Roman, serif
+      cjkFamily: 楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif
+      cnQuoteFamily: 楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif
+      cnBookTitleFamily: 楷体_GB2312, 楷体, KaiTi, KaiTi_GB2312, STKaiti, serif
+    style:
+      size: 16pt
+      weight: 400
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index: '（{zhHansIndex}）'
+    paragraph:
+      align: left
+      indent: 2em
+      spacing:
+        lineHeight: 10.39mm
+        before: 0lines
+        after: 0lines
+  h4:
+    fonts:
+      latinFamily: Times New Roman, serif
+      cjkFamily: 仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif
+      cnQuoteFamily: 仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif
+      cnBookTitleFamily: 仿宋_GB2312, 仿宋, FangSong, FangSong_GB2312, STFangsong, serif
+    style:
+      size: 16pt
+      weight: 400
+      colors:
+        text: '#000000'
+        background: '#ffffff'
+      index: '{arabicIndex}．'
+    paragraph:
+      align: left
+      indent: 2em
+      spacing:
+        lineHeight: 10.39mm
+        before: 0lines
+        after: 0lines
+page:
+  size: A4
+  orientation: portrait
+  pagination:
+    enabled: true
+  margins:
+    top: 34.58mm
+    right: 26mm
+    bottom: 32.58mm
+    left: 28mm
+parser:
+  html: false
+  enterStyle: paragraph
+  linkify: true
+  typographer: true
+  headingNumbering: true
+  localStyleAliases:
+    bodyParagraphIndent: content.body.paragraph.indent
+    h1ParagraphIndent: content.h1.paragraph.indent
+    h2ParagraphIndent: content.h2.paragraph.indent
+    h3ParagraphIndent: content.h3.paragraph.indent
+    h4ParagraphIndent: content.h4.paragraph.indent
+  disabledSyntax:
+    - codeBlock
+    - blockquote
+    - unorderedList
+    - horizontalRule

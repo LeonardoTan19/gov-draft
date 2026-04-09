@@ -22,27 +22,222 @@ const DEFAULT_PAGE_CONFIG: RuleConfig['page'] = {
 
 const OVERFLOW_TOLERANCE_PX = 0.35
 
+const STYLE_WRAPPER_TAG_NAMES = new Set(['DIV', 'SECTION', 'ARTICLE'])
+
+interface BlockSplitResult {
+  fittingHtml: string
+  remainingHtml: string
+}
+
+function parseInlineStyle(styleText: string): Array<[string, string]> {
+  return styleText
+    .split(';')
+    .map((declaration) => declaration.trim())
+    .filter((declaration) => declaration.length > 0)
+    .reduce<Array<[string, string]>>((acc, declaration) => {
+      const separatorIndex = declaration.indexOf(':')
+      if (separatorIndex <= 0) {
+        return acc
+      }
+
+      const property = declaration.slice(0, separatorIndex).trim()
+      const value = declaration.slice(separatorIndex + 1).trim()
+      if (!property || !value) {
+        return acc
+      }
+
+      acc.push([property, value])
+      return acc
+    }, [])
+}
+
+function mergeInlineStyleText(baseStyleText: string, extensionStyleText: string): string {
+  const declarations = new Map<string, string>()
+
+  for (const [property, value] of parseInlineStyle(baseStyleText)) {
+    declarations.set(property, value)
+  }
+
+  for (const [property, value] of parseInlineStyle(extensionStyleText)) {
+    if (declarations.has(property)) {
+      declarations.delete(property)
+    }
+    declarations.set(property, value)
+  }
+
+  return Array.from(declarations.entries())
+    .map(([property, value]) => `${property}: ${value}`)
+    .join('; ')
+}
+
+function applyMergedInlineStyle(element: Element, mergedStyleText: string): void {
+  const normalized = mergedStyleText.trim()
+  if (normalized.length === 0) {
+    element.removeAttribute('style')
+    return
+  }
+
+  element.setAttribute('style', normalized)
+}
+
+function collectBlocksFromNode(node: Node, inheritedStyleText: string, acc: string[]): void {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent?.trim() ?? ''
+    if (text.length > 0) {
+      const paragraph = document.createElement('p')
+      paragraph.textContent = text
+      applyMergedInlineStyle(paragraph, inheritedStyleText)
+      acc.push(paragraph.outerHTML)
+    }
+    return
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return
+  }
+
+  const element = node as Element
+  const ownStyleText = element.getAttribute('style') ?? ''
+  const mergedStyleText = mergeInlineStyleText(inheritedStyleText, ownStyleText)
+
+  // 样式包裹容器按子块拆分分页，同时把样式变量继承到子块。
+  if (STYLE_WRAPPER_TAG_NAMES.has(element.tagName.toUpperCase())) {
+    const childNodes = Array.from(element.childNodes)
+    childNodes.forEach((child) => collectBlocksFromNode(child, mergedStyleText, acc))
+    return
+  }
+
+  const cloned = element.cloneNode(true) as Element
+  applyMergedInlineStyle(cloned, mergedStyleText)
+  acc.push(cloned.outerHTML)
+}
+
 function collectBlocks(html: string): string[] {
   const container = document.createElement('div')
   container.innerHTML = html
 
-  return Array.from(container.childNodes).reduce<string[]>((acc, node) => {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      acc.push((node as Element).outerHTML)
-      return acc
-    }
+  const blocks: string[] = []
+  Array.from(container.childNodes).forEach((node) => {
+    collectBlocksFromNode(node, '', blocks)
+  })
 
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent?.trim() ?? ''
-      if (text.length > 0) {
-        const p = document.createElement('p')
-        p.textContent = text
-        acc.push(p.outerHTML)
-      }
-    }
+  return blocks
+}
 
-    return acc
-  }, [])
+function canFitInEmptyPage(html: string, measureContent: HTMLElement): boolean {
+  measureContent.innerHTML = html
+  return !isOverflowing(measureContent)
+}
+
+function buildElementHtmlWithChildRange(element: Element, childNodes: ChildNode[], start: number, end: number): string {
+  const cloned = element.cloneNode(false) as Element
+  for (let index = start; index < end; index += 1) {
+    const child = childNodes[index]
+    if (!child) {
+      continue
+    }
+    cloned.appendChild(child.cloneNode(true))
+  }
+  return cloned.outerHTML
+}
+
+function trySplitElementByChildNodes(element: Element, measureContent: HTMLElement): BlockSplitResult | null {
+  const childNodes = Array.from(element.childNodes)
+  if (childNodes.length < 2) {
+    return null
+  }
+
+  let low = 1
+  let high = childNodes.length - 1
+  let best = 0
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    const candidate = buildElementHtmlWithChildRange(element, childNodes, 0, mid)
+    if (canFitInEmptyPage(candidate, measureContent)) {
+      best = mid
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  if (best <= 0 || best >= childNodes.length) {
+    return null
+  }
+
+  const fittingHtml = buildElementHtmlWithChildRange(element, childNodes, 0, best)
+  const remainingHtml = buildElementHtmlWithChildRange(element, childNodes, best, childNodes.length)
+  if (fittingHtml.length === 0 || remainingHtml.length === 0) {
+    return null
+  }
+
+  return {
+    fittingHtml,
+    remainingHtml
+  }
+}
+
+function trySplitElementByTextContent(element: Element, measureContent: HTMLElement): BlockSplitResult | null {
+  const text = element.textContent ?? ''
+  const characters = Array.from(text)
+  if (characters.length < 2) {
+    return null
+  }
+
+  let low = 1
+  let high = characters.length - 1
+  let best = 0
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    const fittingText = characters.slice(0, mid).join('')
+    const fittingElement = element.cloneNode(false) as Element
+    fittingElement.textContent = fittingText
+
+    if (canFitInEmptyPage(fittingElement.outerHTML, measureContent)) {
+      best = mid
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  if (best <= 0 || best >= characters.length) {
+    return null
+  }
+
+  const fittingElement = element.cloneNode(false) as Element
+  fittingElement.textContent = characters.slice(0, best).join('')
+
+  const remainingElement = element.cloneNode(false) as Element
+  remainingElement.textContent = characters.slice(best).join('')
+
+  return {
+    fittingHtml: fittingElement.outerHTML,
+    remainingHtml: remainingElement.outerHTML
+  }
+}
+
+function trySplitOversizedBlock(block: string, measureContent: HTMLElement): BlockSplitResult | null {
+  const container = document.createElement('div')
+  container.innerHTML = block
+  const element = container.firstElementChild
+  if (!element) {
+    return null
+  }
+
+  const tagName = element.tagName.toUpperCase()
+  if (tagName === 'H1') {
+    return null
+  }
+
+  const childSplit = trySplitElementByChildNodes(element, measureContent)
+  if (childSplit) {
+    return childSplit
+  }
+
+  return trySplitElementByTextContent(element, measureContent)
 }
 
 function isOverflowing(el: HTMLElement): boolean {
@@ -74,16 +269,12 @@ function isH1Block(block: string): boolean {
 }
 
 function extractDynamicSectionKey(block: string): string | null {
-  if (!/local-style-container/.test(block)) {
-    return null
-  }
-
-  const styleAttrMatch = block.match(/style="([^"]*)"/)
+  const styleAttrMatch = block.match(/\sstyle=(['"])(.*?)\1/)
   if (!styleAttrMatch) {
     return null
   }
 
-  const dynamicSectionMatch = styleAttrMatch[1]?.match(/--content-h1-section-style\s*:\s*([^;]+)/)
+  const dynamicSectionMatch = styleAttrMatch[2]?.match(/--content-h1-section-style\s*:\s*([^;]+)/)
   const dynamicSectionKey = dynamicSectionMatch?.[1]?.trim()
   return dynamicSectionKey && dynamicSectionKey.length > 0 ? dynamicSectionKey : null
 }
@@ -265,7 +456,24 @@ export function usePaginator() {
       let currentPageHtml = ''
       let currentSectionIndex = 1
 
-      for (const block of blocks) {
+      const pushCurrentPage = (): void => {
+        if (currentPageHtml.length === 0) {
+          return
+        }
+
+        result.push(currentPageHtml)
+        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
+        currentPageHtml = ''
+      }
+
+      const pendingBlocks = [...blocks]
+
+      while (pendingBlocks.length > 0) {
+        const block = pendingBlocks.shift()
+        if (!block) {
+          continue
+        }
+
         const blockStartsNewSection = isH1Block(block)
 
         if (blockStartsNewSection && currentPageHtml.length === 0) {
@@ -274,9 +482,7 @@ export function usePaginator() {
         }
 
         if (blockStartsNewSection && currentPageHtml.length > 0) {
-          result.push(currentPageHtml)
-          entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
-          currentPageHtml = ''
+          pushCurrentPage()
           currentSectionIndex += 1
           currentSectionKey = resolveSectionKeyForBlock(block, baseSectionKey, currentSectionIndex)
           measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
@@ -290,23 +496,28 @@ export function usePaginator() {
           continue
         }
 
-        if (currentPageHtml.length === 0) {
-          result.push(block)
-          entries.push({ html: block, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
+        if (currentPageHtml.length > 0) {
+          pushCurrentPage()
+          pendingBlocks.unshift(block)
           measureContent.innerHTML = ''
           continue
         }
 
-        result.push(currentPageHtml)
-        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
+        const splitBlock = trySplitOversizedBlock(block, measureContent)
+        if (splitBlock) {
+          currentPageHtml = splitBlock.fittingHtml
+          pushCurrentPage()
+          pendingBlocks.unshift(splitBlock.remainingHtml)
+          measureContent.innerHTML = ''
+          continue
+        }
+
         currentPageHtml = block
-        measureContent.innerHTML = currentPageHtml
+        pushCurrentPage()
+        measureContent.innerHTML = ''
       }
 
-      if (currentPageHtml.length > 0) {
-        result.push(currentPageHtml)
-        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
-      }
+      pushCurrentPage()
 
       pages.value = result.length > 0 ? result : ['']
       pageMetas.value = entries.length > 0
