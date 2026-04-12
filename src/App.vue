@@ -68,8 +68,8 @@ onMounted(() => {
 
 if (import.meta.hot) {
   import.meta.hot.accept([
-    './core/builtin-rules/gb-t-9704.yaml?raw',
-    './core/builtin-rules/gb-t-9704-pagination.yaml?raw'
+    './core/builtin-rules/gb-t-33476.yaml?raw',
+    './core/builtin-rules/gb-t-33476-pagination.yaml?raw'
   ], () => {
     ruleStore.initializeRule()
     updateContent()

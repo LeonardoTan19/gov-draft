@@ -1,7 +1,7 @@
 # YAML 规则范本说明（当前支持）
 
 本文档描述 `gov-draft` 当前支持的规则 YAML 结构，基于内置范本：
-- `src/core/builtin-rules/gb-t-9704.yaml`
+- `src/core/builtin-rules/gb-t-33476.yaml`
 
 ## 1. 顶层结构
 
@@ -144,7 +144,7 @@ sectionStyle: string            # 可选，页码 section 匹配键；默认 sec
 
 ## 7. 页码配置（独立 YAML）
 
-页码是否启用由主规则中的 `page.pagination.enabled` 控制；页码详细设置放在独立 YAML（内置为 `src/core/builtin-rules/gb-t-9704-pagination.yaml`），支持多 section：
+页码是否启用由主规则中的 `page.pagination.enabled` 控制；页码详细设置放在独立 YAML（内置为 `src/core/builtin-rules/gb-t-33476-pagination.yaml`），支持多 section：
 
 ```yaml
 section:

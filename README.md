@@ -49,8 +49,8 @@ pnpm pdf:inspect -- ./path/to/exported.pdf --json
 
 - [docs/rule-yaml-schema.md](docs/rule-yaml-schema.md)：规则 YAML 结构与字段说明
 - [docs/style-architecture.md](docs/style-architecture.md)：样式分层与约定
-- [src/core/builtin-rules/gb-t-9704.yaml](src/core/builtin-rules/gb-t-9704.yaml)：内置主规则
-- [src/core/builtin-rules/gb-t-9704-pagination.yaml](src/core/builtin-rules/gb-t-9704-pagination.yaml)：内置分页规则
+- [src/core/builtin-rules/gb-t-33476.yaml](src/core/builtin-rules/gb-t-33476.yaml)：内置主规则
+- [src/core/builtin-rules/gb-t-33476-pagination.yaml](src/core/builtin-rules/gb-t-33476-pagination.yaml)：内置分页规则
 - [.github/copilot-instructions.md](.github/copilot-instructions.md)：Copilot/AI 协作说明
 
 ## 开发说明
