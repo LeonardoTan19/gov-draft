@@ -4,9 +4,14 @@
  * 集成 Paged.js 库实现精确的分页预览
  */
 
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import type { PaginationConfig, PaginationSectionsConfig, RuleConfig } from '../types/rule'
 import { getPageContentHeightPx } from '../core/utils/page-metrics-utils'
+import {
+  collectBlocks,
+  DEFAULT_LOCAL_STYLE_CONTAINER_CLASS_NAME,
+  DEFAULT_STYLE_WRAPPER_TAG_NAMES
+} from '../core/utils/pagination-block-utils'
 import { useRuleStore } from '../stores/rule'
 
 const DEFAULT_PAGE_CONFIG: RuleConfig['page'] = {
@@ -20,113 +25,51 @@ const DEFAULT_PAGE_CONFIG: RuleConfig['page'] = {
   }
 }
 
-const OVERFLOW_TOLERANCE_PX = 0.35
-
-const STYLE_WRAPPER_TAG_NAMES = new Set(['DIV', 'SECTION', 'ARTICLE'])
-
 interface BlockSplitResult {
   fittingHtml: string
   remainingHtml: string
 }
 
-function parseInlineStyle(styleText: string): Array<[string, string]> {
-  return styleText
-    .split(';')
-    .map((declaration) => declaration.trim())
-    .filter((declaration) => declaration.length > 0)
-    .reduce<Array<[string, string]>>((acc, declaration) => {
-      const separatorIndex = declaration.indexOf(':')
-      if (separatorIndex <= 0) {
-        return acc
-      }
+type SplitFailureReason = 'no_element' | 'heading_not_split' | 'no_split_point'
 
-      const property = declaration.slice(0, separatorIndex).trim()
-      const value = declaration.slice(separatorIndex + 1).trim()
-      if (!property || !value) {
-        return acc
-      }
-
-      acc.push([property, value])
-      return acc
-    }, [])
+interface SplitAttemptResult {
+  split: BlockSplitResult | null
+  failureReason: SplitFailureReason | null
 }
 
-function mergeInlineStyleText(baseStyleText: string, extensionStyleText: string): string {
-  const declarations = new Map<string, string>()
-
-  for (const [property, value] of parseInlineStyle(baseStyleText)) {
-    declarations.set(property, value)
-  }
-
-  for (const [property, value] of parseInlineStyle(extensionStyleText)) {
-    if (declarations.has(property)) {
-      declarations.delete(property)
-    }
-    declarations.set(property, value)
-  }
-
-  return Array.from(declarations.entries())
-    .map(([property, value]) => `${property}: ${value}`)
-    .join('; ')
+export interface UsePaginatorOptions {
+  overflowTolerancePx?: number
+  maxSplitIterations?: number
+  styleWrapperTagNames?: ReadonlySet<string>
+  localStyleContainerClassName?: string
 }
 
-function applyMergedInlineStyle(element: Element, mergedStyleText: string): void {
-  const normalized = mergedStyleText.trim()
-  if (normalized.length === 0) {
-    element.removeAttribute('style')
-    return
-  }
-
-  element.setAttribute('style', normalized)
+interface ResolvedPaginatorOptions {
+  overflowTolerancePx: number
+  maxSplitIterations: number
+  styleWrapperTagNames: ReadonlySet<string>
+  localStyleContainerClassName: string
 }
 
-function collectBlocksFromNode(node: Node, inheritedStyleText: string, acc: string[]): void {
-  if (node.nodeType === Node.TEXT_NODE) {
-    const text = node.textContent?.trim() ?? ''
-    if (text.length > 0) {
-      const paragraph = document.createElement('p')
-      paragraph.textContent = text
-      applyMergedInlineStyle(paragraph, inheritedStyleText)
-      acc.push(paragraph.outerHTML)
-    }
-    return
-  }
-
-  if (node.nodeType !== Node.ELEMENT_NODE) {
-    return
-  }
-
-  const element = node as Element
-  const ownStyleText = element.getAttribute('style') ?? ''
-  const mergedStyleText = mergeInlineStyleText(inheritedStyleText, ownStyleText)
-
-  // 样式包裹容器按子块拆分分页，同时把样式变量继承到子块。
-  if (STYLE_WRAPPER_TAG_NAMES.has(element.tagName.toUpperCase())) {
-    const childNodes = Array.from(element.childNodes)
-    childNodes.forEach((child) => collectBlocksFromNode(child, mergedStyleText, acc))
-    return
-  }
-
-  const cloned = element.cloneNode(true) as Element
-  applyMergedInlineStyle(cloned, mergedStyleText)
-  acc.push(cloned.outerHTML)
+const DEFAULT_PAGINATOR_OPTIONS: ResolvedPaginatorOptions = {
+  overflowTolerancePx: 0.35,
+  maxSplitIterations: 2000,
+  styleWrapperTagNames: DEFAULT_STYLE_WRAPPER_TAG_NAMES,
+  localStyleContainerClassName: DEFAULT_LOCAL_STYLE_CONTAINER_CLASS_NAME
 }
 
-function collectBlocks(html: string): string[] {
-  const container = document.createElement('div')
-  container.innerHTML = html
-
-  const blocks: string[] = []
-  Array.from(container.childNodes).forEach((node) => {
-    collectBlocksFromNode(node, '', blocks)
-  })
-
-  return blocks
+function resolvePaginatorOptions(options: UsePaginatorOptions): ResolvedPaginatorOptions {
+  return {
+    overflowTolerancePx: options.overflowTolerancePx ?? DEFAULT_PAGINATOR_OPTIONS.overflowTolerancePx,
+    maxSplitIterations: options.maxSplitIterations ?? DEFAULT_PAGINATOR_OPTIONS.maxSplitIterations,
+    styleWrapperTagNames: options.styleWrapperTagNames ?? DEFAULT_PAGINATOR_OPTIONS.styleWrapperTagNames,
+    localStyleContainerClassName: options.localStyleContainerClassName ?? DEFAULT_PAGINATOR_OPTIONS.localStyleContainerClassName
+  }
 }
 
-function canFitInEmptyPage(html: string, measureContent: HTMLElement): boolean {
+function canFitInEmptyPage(html: string, measureContent: HTMLElement, overflowTolerancePx: number): boolean {
   measureContent.innerHTML = html
-  return !isOverflowing(measureContent)
+  return !isOverflowing(measureContent, overflowTolerancePx)
 }
 
 function buildElementHtmlWithChildRange(element: Element, childNodes: ChildNode[], start: number, end: number): string {
@@ -141,7 +84,11 @@ function buildElementHtmlWithChildRange(element: Element, childNodes: ChildNode[
   return cloned.outerHTML
 }
 
-function trySplitElementByChildNodes(element: Element, measureContent: HTMLElement): BlockSplitResult | null {
+function trySplitElementByChildNodes(
+  element: Element,
+  measureContent: HTMLElement,
+  overflowTolerancePx: number
+): BlockSplitResult | null {
   const childNodes = Array.from(element.childNodes)
   if (childNodes.length < 2) {
     return null
@@ -154,7 +101,7 @@ function trySplitElementByChildNodes(element: Element, measureContent: HTMLEleme
   while (low <= high) {
     const mid = Math.floor((low + high) / 2)
     const candidate = buildElementHtmlWithChildRange(element, childNodes, 0, mid)
-    if (canFitInEmptyPage(candidate, measureContent)) {
+    if (canFitInEmptyPage(candidate, measureContent, overflowTolerancePx)) {
       best = mid
       low = mid + 1
     } else {
@@ -178,7 +125,11 @@ function trySplitElementByChildNodes(element: Element, measureContent: HTMLEleme
   }
 }
 
-function trySplitElementByTextContent(element: Element, measureContent: HTMLElement): BlockSplitResult | null {
+function trySplitElementByTextContent(
+  element: Element,
+  measureContent: HTMLElement,
+  overflowTolerancePx: number
+): BlockSplitResult | null {
   const text = element.textContent ?? ''
   const characters = Array.from(text)
   if (characters.length < 2) {
@@ -195,7 +146,7 @@ function trySplitElementByTextContent(element: Element, measureContent: HTMLElem
     const fittingElement = element.cloneNode(false) as Element
     fittingElement.textContent = fittingText
 
-    if (canFitInEmptyPage(fittingElement.outerHTML, measureContent)) {
+    if (canFitInEmptyPage(fittingElement.outerHTML, measureContent, overflowTolerancePx)) {
       best = mid
       low = mid + 1
     } else {
@@ -212,6 +163,9 @@ function trySplitElementByTextContent(element: Element, measureContent: HTMLElem
 
   const remainingElement = element.cloneNode(false) as Element
   remainingElement.textContent = characters.slice(best).join('')
+  remainingElement.setAttribute('data-split-from', 'text-content')
+  const remainingHtmlElement = remainingElement as HTMLElement
+  remainingHtmlElement.style.setProperty('text-indent', '0')
 
   return {
     fittingHtml: fittingElement.outerHTML,
@@ -219,30 +173,47 @@ function trySplitElementByTextContent(element: Element, measureContent: HTMLElem
   }
 }
 
-function trySplitOversizedBlock(block: string, measureContent: HTMLElement): BlockSplitResult | null {
+function trySplitOversizedBlock(
+  block: string,
+  measureContent: HTMLElement,
+  overflowTolerancePx: number
+): SplitAttemptResult {
   const container = document.createElement('div')
   container.innerHTML = block
   const element = container.firstElementChild
   if (!element) {
-    return null
+    return {
+      split: null,
+      failureReason: 'no_element'
+    }
   }
 
   const tagName = element.tagName.toUpperCase()
   if (tagName === 'H1') {
-    return null
+    return {
+      split: null,
+      failureReason: 'heading_not_split'
+    }
   }
 
-  const childSplit = trySplitElementByChildNodes(element, measureContent)
+  const childSplit = trySplitElementByChildNodes(element, measureContent, overflowTolerancePx)
   if (childSplit) {
-    return childSplit
+    return {
+      split: childSplit,
+      failureReason: null
+    }
   }
 
-  return trySplitElementByTextContent(element, measureContent)
+  const textSplit = trySplitElementByTextContent(element, measureContent, overflowTolerancePx)
+  return {
+    split: textSplit,
+    failureReason: textSplit ? null : 'no_split_point'
+  }
 }
 
-function isOverflowing(el: HTMLElement): boolean {
+function isOverflowing(el: HTMLElement, overflowTolerancePx: number): boolean {
   const scrollOverflow = el.scrollHeight - el.clientHeight
-  if (scrollOverflow > OVERFLOW_TOLERANCE_PX) {
+  if (scrollOverflow > overflowTolerancePx) {
     return true
   }
 
@@ -261,7 +232,7 @@ function isOverflowing(el: HTMLElement): boolean {
   const marginBottom = Number.parseFloat(computedStyle.marginBottom || '0')
   const contentBottom = lastRect.bottom + (Number.isFinite(marginBottom) ? marginBottom : 0)
 
-  return contentBottom - containerRect.bottom > OVERFLOW_TOLERANCE_PX
+  return contentBottom - containerRect.bottom > overflowTolerancePx
 }
 
 function isH1Block(block: string): boolean {
@@ -289,9 +260,14 @@ function resolveSectionKeyForBlock(block: string, baseSectionKey: string, sectio
 }
 
 interface RawPageEntry {
-  html: string
   sectionIndex: number
   sectionKey: string
+}
+
+interface PaginateBlocksResult {
+  pages: string[]
+  entries: RawPageEntry[]
+  currentSectionKey: string
 }
 
 export interface PageRenderMeta {
@@ -394,25 +370,187 @@ function buildPageMeta(
   })
 }
 
+function createSinglePageMeta(
+  sectionKey: string,
+  paginationSections: PaginationSectionsConfig | undefined
+): PageRenderMeta {
+  return {
+    sectionIndex: 1,
+    sectionKey,
+    sectionPage: 1,
+    sectionTotal: 1,
+    globalPage: 1,
+    globalTotal: 1,
+    pagination: resolveSectionPaginationConfig(sectionKey, paginationSections)
+  }
+}
+
+function prepareMeasureContainer(measureContent: HTMLElement, pageHeight: number): void {
+  measureContent.style.display = 'flow-root'
+  measureContent.style.overflow = 'hidden'
+  measureContent.style.height = `${pageHeight}px`
+}
+
+function clearMeasureContent(measureContent: HTMLElement): void {
+  measureContent.innerHTML = ''
+}
+
+function clampPage(page: number, pageCount: number): number {
+  if (pageCount <= 0) {
+    return 1
+  }
+
+  return Math.min(Math.max(page, 1), pageCount)
+}
+
+function paginateBlocks(
+  blocks: string[],
+  measureContent: HTMLElement,
+  baseSectionKey: string,
+  initialSectionKey: string,
+  options: ResolvedPaginatorOptions,
+  getPageHeight: (sectionKey: string) => number
+): PaginateBlocksResult {
+  const result: string[] = []
+  const entries: RawPageEntry[] = []
+  let currentPageHtml = ''
+  let currentSectionIndex = 1
+  let currentSectionKey = initialSectionKey
+  const pendingBlocks = [...blocks]
+  let splitIterationCount = 0
+
+  const pushCurrentPage = (): void => {
+    if (currentPageHtml.length === 0) {
+      return
+    }
+
+    result.push(currentPageHtml)
+    entries.push({ sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
+    currentPageHtml = ''
+  }
+
+  while (pendingBlocks.length > 0) {
+    splitIterationCount += 1
+    if (splitIterationCount > options.maxSplitIterations) {
+      throw new Error(`分页循环超过最大迭代次数: ${options.maxSplitIterations}`)
+    }
+
+    const block = pendingBlocks.shift()
+    if (!block) {
+      continue
+    }
+
+    const blockStartsNewSection = isH1Block(block)
+
+    if (blockStartsNewSection) {
+      if (currentPageHtml.length > 0) {
+        pushCurrentPage()
+        currentSectionIndex += 1
+      }
+
+      currentSectionKey = resolveSectionKeyForBlock(block, baseSectionKey, currentSectionIndex)
+      prepareMeasureContainer(measureContent, getPageHeight(currentSectionKey))
+    }
+
+    const candidateHtml = `${currentPageHtml}${block}`
+    measureContent.innerHTML = candidateHtml
+
+    if (!isOverflowing(measureContent, options.overflowTolerancePx)) {
+      currentPageHtml = candidateHtml
+      continue
+    }
+
+    if (currentPageHtml.length > 0) {
+      pushCurrentPage()
+      pendingBlocks.unshift(block)
+      clearMeasureContent(measureContent)
+      continue
+    }
+
+    const splitAttempt = trySplitOversizedBlock(block, measureContent, options.overflowTolerancePx)
+    if (splitAttempt.split) {
+      currentPageHtml = splitAttempt.split.fittingHtml
+      pushCurrentPage()
+      pendingBlocks.unshift(splitAttempt.split.remainingHtml)
+      clearMeasureContent(measureContent)
+      continue
+    }
+
+    if (splitAttempt.failureReason) {
+      console.warn(`分页块拆分失败(${splitAttempt.failureReason})，将按整块落页`)
+    }
+
+    currentPageHtml = block
+    pushCurrentPage()
+    clearMeasureContent(measureContent)
+  }
+
+  pushCurrentPage()
+
+  return {
+    pages: result,
+    entries,
+    currentSectionKey
+  }
+}
+
 /**
  * usePaginator 组合式函数
  * 提供文档分页和页面导航功能
  * 
  * @returns 分页相关的状态和方法
  */
-export function usePaginator() {
+export function usePaginator(options: UsePaginatorOptions = {}) {
+  const resolvedOptions = resolvePaginatorOptions(options)
   const ruleStore = useRuleStore()
   const pages = ref<string[]>([''])
   const pageMetas = ref<PageRenderMeta[]>([])
 
   /** 总页数 */
-  const pageCount = ref<number>(0)
+  const pageCount = computed<number>(() => (pageMetas.value.length === 0 ? 0 : pages.value.length))
   
   /** 当前页码（从 1 开始） */
   const currentPage = ref<number>(1)
   
   /** 分页是否正在进行 */
   const isPaginating = ref<boolean>(false)
+
+  /**
+   * 获取页面内容区高度（A4 纸张高度减去上下边距）
+   * @returns 页面内容区高度（像素）
+   */
+  const getPageHeight = (sectionKey?: string): number => {
+    const basePageConfig = ruleStore.currentRule?.page ?? DEFAULT_PAGE_CONFIG
+    const resolvedPageConfig = sectionKey
+      ? resolveSectionPageConfig(sectionKey, ruleStore.currentRule?.paginationSections, basePageConfig)
+      : basePageConfig
+
+    return getPageContentHeightPx(resolvedPageConfig)
+  }
+
+  const applyPaginationState = (result: string[], entries: RawPageEntry[], currentSectionKey: string): void => {
+    const nextPages = result.length > 0 ? result : ['']
+    const nextPageMetas = entries.length > 0
+      ? buildPageMeta(entries, ruleStore.currentRule?.paginationSections)
+      : [createSinglePageMeta(currentSectionKey, ruleStore.currentRule?.paginationSections)]
+
+    pages.value = nextPages
+    pageMetas.value = nextPageMetas
+    currentPage.value = clampPage(currentPage.value, nextPages.length)
+  }
+
+  const stepPage = (delta: number): void => {
+    goToPage(currentPage.value + delta)
+  }
+
+  const canNavigateToPage = (page: number): boolean => {
+    if (page < 1 || page > pageCount.value) {
+      console.warn(`页码 ${page} 超出范围 [1, ${pageCount.value}]`)
+      return false
+    }
+
+    return true
+  }
 
   const paginate = async (html: string, measureContent: HTMLElement | null): Promise<void> => {
     await nextTick()
@@ -426,121 +564,34 @@ export function usePaginator() {
 
     try {
       const baseSectionKey = resolveH1SectionStyle(ruleStore.currentRule)
-      let currentSectionKey = buildSectionKey(baseSectionKey, 1)
-      measureContent.style.display = 'flow-root'
-      measureContent.style.overflow = 'hidden'
-      measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
+      const initialSectionKey = buildSectionKey(baseSectionKey, 1)
+      prepareMeasureContainer(measureContent, getPageHeight(initialSectionKey))
 
-      const blocks = collectBlocks(html)
+      const blocks = collectBlocks(html, {
+        styleWrapperTagNames: resolvedOptions.styleWrapperTagNames,
+        localStyleContainerClassName: resolvedOptions.localStyleContainerClassName
+      })
+
       if (blocks.length === 0) {
-        pages.value = ['']
-        pageMetas.value = [
-          {
-            sectionIndex: 1,
-            sectionKey: currentSectionKey,
-            sectionPage: 1,
-            sectionTotal: 1,
-            globalPage: 1,
-            globalTotal: 1,
-            pagination: resolveSectionPaginationConfig(currentSectionKey, ruleStore.currentRule?.paginationSections)
-          }
-        ]
-        pageCount.value = 1
-        currentPage.value = 1
-        measureContent.innerHTML = ''
+        applyPaginationState([], [], initialSectionKey)
         return
       }
 
-      const result: string[] = []
-      const entries: RawPageEntry[] = []
-      let currentPageHtml = ''
-      let currentSectionIndex = 1
-
-      const pushCurrentPage = (): void => {
-        if (currentPageHtml.length === 0) {
-          return
-        }
-
-        result.push(currentPageHtml)
-        entries.push({ html: currentPageHtml, sectionIndex: currentSectionIndex, sectionKey: currentSectionKey })
-        currentPageHtml = ''
-      }
-
-      const pendingBlocks = [...blocks]
-
-      while (pendingBlocks.length > 0) {
-        const block = pendingBlocks.shift()
-        if (!block) {
-          continue
-        }
-
-        const blockStartsNewSection = isH1Block(block)
-
-        if (blockStartsNewSection && currentPageHtml.length === 0) {
-          currentSectionKey = resolveSectionKeyForBlock(block, baseSectionKey, currentSectionIndex)
-          measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
-        }
-
-        if (blockStartsNewSection && currentPageHtml.length > 0) {
-          pushCurrentPage()
-          currentSectionIndex += 1
-          currentSectionKey = resolveSectionKeyForBlock(block, baseSectionKey, currentSectionIndex)
-          measureContent.style.height = `${getPageHeight(currentSectionKey)}px`
-        }
-
-        const candidateHtml = `${currentPageHtml}${block}`
-        measureContent.innerHTML = candidateHtml
-
-        if (!isOverflowing(measureContent)) {
-          currentPageHtml = candidateHtml
-          continue
-        }
-
-        if (currentPageHtml.length > 0) {
-          pushCurrentPage()
-          pendingBlocks.unshift(block)
-          measureContent.innerHTML = ''
-          continue
-        }
-
-        const splitBlock = trySplitOversizedBlock(block, measureContent)
-        if (splitBlock) {
-          currentPageHtml = splitBlock.fittingHtml
-          pushCurrentPage()
-          pendingBlocks.unshift(splitBlock.remainingHtml)
-          measureContent.innerHTML = ''
-          continue
-        }
-
-        currentPageHtml = block
-        pushCurrentPage()
-        measureContent.innerHTML = ''
-      }
-
-      pushCurrentPage()
-
-      pages.value = result.length > 0 ? result : ['']
-      pageMetas.value = entries.length > 0
-        ? buildPageMeta(entries, ruleStore.currentRule?.paginationSections)
-        : [
-            {
-              sectionIndex: 1,
-              sectionKey: currentSectionKey,
-              sectionPage: 1,
-              sectionTotal: 1,
-              globalPage: 1,
-              globalTotal: 1,
-              pagination: resolveSectionPaginationConfig(currentSectionKey, ruleStore.currentRule?.paginationSections)
-            }
-          ]
-      pageCount.value = pages.value.length
-      currentPage.value = Math.min(Math.max(currentPage.value, 1), pageCount.value)
-      measureContent.innerHTML = ''
+      const paginateResult = paginateBlocks(
+        blocks,
+        measureContent,
+        baseSectionKey,
+        initialSectionKey,
+        resolvedOptions,
+        getPageHeight
+      )
+      applyPaginationState(paginateResult.pages, paginateResult.entries, paginateResult.currentSectionKey)
       
     } catch (error) {
       console.error('分页失败:', error)
       throw error
     } finally {
+      clearMeasureContent(measureContent)
       isPaginating.value = false
     }
   }
@@ -550,8 +601,7 @@ export function usePaginator() {
    * @param page - 目标页码（从 1 开始）
    */
   const goToPage = (page: number): void => {
-    if (page < 1 || page > pageCount.value) {
-      console.warn(`页码 ${page} 超出范围 [1, ${pageCount.value}]`)
+    if (!canNavigateToPage(page)) {
       return
     }
     
@@ -566,7 +616,7 @@ export function usePaginator() {
    */
   const nextPage = (): void => {
     if (currentPage.value < pageCount.value) {
-      goToPage(currentPage.value + 1)
+      stepPage(1)
     }
   }
 
@@ -575,21 +625,8 @@ export function usePaginator() {
    */
   const previousPage = (): void => {
     if (currentPage.value > 1) {
-      goToPage(currentPage.value - 1)
+      stepPage(-1)
     }
-  }
-
-  /**
-   * 获取页面内容区高度（A4 纸张高度减去上下边距）
-   * @returns 页面内容区高度（像素）
-   */
-  const getPageHeight = (sectionKey?: string): number => {
-    const basePageConfig = ruleStore.currentRule?.page ?? DEFAULT_PAGE_CONFIG
-    const resolvedPageConfig = sectionKey
-      ? resolveSectionPageConfig(sectionKey, ruleStore.currentRule?.paginationSections, basePageConfig)
-      : basePageConfig
-
-    return getPageContentHeightPx(resolvedPageConfig)
   }
 
   const scrollToPage = (page: number): void => {

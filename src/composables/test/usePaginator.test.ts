@@ -31,6 +31,18 @@ function mockOverflowByParagraphCount(measureContent: HTMLElement, maxParagraphC
   })
 }
 
+function mockSlightOverflowByHtmlLength(measureContent: HTMLElement, maxHtmlLength: number): void {
+  Object.defineProperty(measureContent, 'clientHeight', {
+    configurable: true,
+    get: () => 100
+  })
+
+  Object.defineProperty(measureContent, 'scrollHeight', {
+    configurable: true,
+    get: () => (measureContent.innerHTML.length > maxHtmlLength ? 100.6 : 100)
+  })
+}
+
 describe('usePaginator sectionStyle pagination matching', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -198,7 +210,7 @@ describe('usePaginator sectionStyle pagination matching', () => {
 
     expect(pageMetas.value).toHaveLength(1)
     expect(pageMetas.value[0]?.sectionKey).toBe('section1')
-    expect(pages.value[0]).not.toContain('local-style-container')
+    expect(pages.value[0]).toContain('local-style-container')
     expect(pages.value[0]).toContain('--content-h1-section-style: section1')
   })
 
@@ -233,6 +245,8 @@ describe('usePaginator sectionStyle pagination matching', () => {
     expect(pages.value.length).toBeGreaterThan(1)
     expect(pages.value[0]).toContain('<p')
     expect(pages.value.join('')).toContain('超长单行文本分页拆分能力')
+    expect(pages.value[1]).toContain('data-split-from="text-content"')
+    expect(pages.value[1]).toContain('text-indent: 0')
   })
 
   it('splits signature lines in style wrapper near page boundary instead of moving them together', async () => {
@@ -274,5 +288,19 @@ describe('usePaginator sectionStyle pagination matching', () => {
 
     expect(measureContent.style.display).toBe('flow-root')
     expect(measureContent.style.overflow).toBe('hidden')
+  })
+
+  it('supports custom overflow tolerance to reduce over-splitting', async () => {
+    const ruleStore = useRuleStore()
+    const rule = createValidRule()
+    ruleStore.loadRule(rule)
+
+    const { paginate, pages } = usePaginator({ overflowTolerancePx: 1 })
+    const measureContent = document.createElement('div')
+    mockSlightOverflowByHtmlLength(measureContent, 20)
+
+    await paginate('<p>第一段内容</p><p>第二段内容</p>', measureContent)
+
+    expect(pages.value).toHaveLength(1)
   })
 })
