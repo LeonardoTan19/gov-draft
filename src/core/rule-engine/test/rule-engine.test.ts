@@ -6,6 +6,7 @@ describe('RuleEngine', () => {
   it('compiles valid rule into tokens/rules/cssText', () => {
     const validRule = createValidRule()
     const compiled = ruleEngine.compile(validRule)
+    const expectedPageMargin = `${validRule.page.margins.top} ${validRule.page.margins.right} ${validRule.page.margins.bottom} ${validRule.page.margins.left}`
 
     expect(Object.keys(compiled.tokens).length).toBeGreaterThan(10)
     expect(compiled.rules.length).toBeGreaterThan(0)
@@ -21,7 +22,9 @@ describe('RuleEngine', () => {
     expect(compiled.cssText).toContain('@page')
     expect(compiled.cssText).toContain('.paper-sheet.preview-content, .export-document')
     expect(compiled.cssText).toContain('padding: var(--page-margins-top) var(--page-margins-right) var(--page-margins-bottom) var(--page-margins-left);')
-    expect(compiled.cssText).toContain('margin: 37mm 26mm 35mm 28mm;')
+    expect(compiled.cssText).toContain(`margin: ${expectedPageMargin};`)
+    expect(compiled.cssText).toContain('.preview-content .local-style-container')
+    expect(compiled.cssText).toContain('break-inside: auto;')
   })
 
   it('throws meaningful error when compile receives invalid rule', () => {
@@ -34,8 +37,9 @@ describe('RuleEngine', () => {
 
   it('provides builtin rules from yaml source', () => {
     const rules = ruleEngine.getBuiltinRules()
-    expect(rules.length).toBeGreaterThan(0)
-    expect(rules[0]?.name).toContain('GB/T 9704-2012')
+    expect(rules.length).toBeGreaterThan(1)
+    expect(rules[0]?.name).toContain('GB/T 33476-2016')
+    expect(rules.some((rule) => rule.name.includes('GB/T 9704-2012'))).toBe(true)
   })
 
   it('generates tokens for custom content level without adding new style rules', () => {
