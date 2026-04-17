@@ -16,6 +16,8 @@ describe('RuleEngine', () => {
     expect(compiled.cssText).toContain('--content-body-paragraph-indent')
     expect(compiled.cssText).toContain('--content-h2-paragraph-indent')
     expect(compiled.cssText).toContain('--content-h2-paragraph-spacing-before')
+    expect(compiled.cssText).toContain('--content-h1-paragraph-spacing-before: 2lh;')
+    expect(compiled.cssText).toContain('--content-h1-paragraph-spacing-after: 1lh;')
     expect(compiled.cssText).toContain('.cn-quote')
     expect(compiled.cssText).toContain('.cn-book-title')
     expect(compiled.cssText).toContain('.latin-text')

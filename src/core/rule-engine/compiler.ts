@@ -59,7 +59,7 @@ function normalizeParagraphSpacing(value: unknown): string {
   }
 
   const lines = matched[1] ?? '0'
-  return `${lines}em`
+  return `${lines}lh`
 }
 
 function setToken(tokens: Record<string, string>, path: string, value: unknown): void {
