@@ -6,11 +6,9 @@
 
 import { useDocumentStore } from '../stores/doc'
 import { useRuleStore } from '../stores/rule'
-import { cssLengthToPx, resolvePageDimensions } from '../core/utils/page-metrics-utils'
-import type { CssLength } from '../types/rule'
+import { resolvePdfPageFormatMm } from '../core/utils/page-metrics-utils'
 import { i18n } from '../locales'
 
-const MM_PER_PX = 25.4 / 96
 const EXPORT_DEBUG_KEY = 'gov-draft:export-debug'
 const EXPORT_FONT_FACE_CSS = `
 @font-face {
@@ -264,11 +262,7 @@ export function useFileSystem() {
         import('html2canvas')
       ])
 
-      const pageConfig = ruleStore.currentRule?.page
-      const orientation = pageConfig?.orientation ?? 'portrait'
-      const dimensions = resolvePageDimensions(pageConfig?.size, orientation, pageConfig?.dimensions)
-      const width = cssLengthToPx(dimensions.width as CssLength) * MM_PER_PX
-      const height = cssLengthToPx(dimensions.height as CssLength) * MM_PER_PX
+      const { orientation, width, height } = resolvePdfPageFormatMm(ruleStore.currentRule?.page)
 
       const pdf = new jsPDF({
         unit: 'mm',

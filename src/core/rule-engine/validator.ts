@@ -1,6 +1,6 @@
 import type { ValidationIssue, ValidationResult } from '../../types/rule'
 import { i18n } from '../../locales'
-import { canConvertCssLengthToPx } from '../utils/page-metrics-utils'
+import { isConvertibleCssLength } from '../utils/page-metrics-utils'
 import { evaluateNumericTemplateExpression } from '../utils/template-expression-utils'
 import { validateLocalStyleTargetPath } from '../utils/local-style-path-utils'
 
@@ -436,7 +436,7 @@ function isValidPaginationExpression(expression: string): boolean {
 }
 
 function validateConvertiblePageMargin(value: unknown, path: string, issues: ValidationIssue[]): void {
-  if (!canConvertCssLengthToPx(value)) {
+  if (!isConvertibleCssLength(value)) {
     pushError(issues, path, t('errors.validator.convertibleCssLength'))
   }
 }
